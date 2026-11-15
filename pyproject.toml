@@ -1,0 +1,27 @@
+[project]
+name = "quest-teleop"
+version = "0.2.0"
+description = "VR teleoperation without a game engine: stream a 3D scene to a Meta Quest, drive a simulator or robot with the controllers, record the trajectories, watch a local status page."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "tools/fonts/OFL.txt"]
+requires-python = ">=3.10"
+dependencies = ["numpy"]
+
+[project.scripts]
+quest-teleop-demo = "quest_teleop.demo:main"
+quest-teleop-probe = "quest_teleop.probe:main"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["server/quest_teleop"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["server"]

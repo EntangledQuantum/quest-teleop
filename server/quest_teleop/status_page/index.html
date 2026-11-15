@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} status</title>
+<style>
+/* Dark theme: square corners, hairlines, no boxes; a display face for titles and a mono face for labels. */
+@font-face { font-family: "Host Grotesk"; font-weight: 400; src: url("/fonts/HostGrotesk-Regular.ttf"); font-display: swap; }
+@font-face { font-family: "Host Grotesk"; font-weight: 500; src: url("/fonts/HostGrotesk-Medium.ttf"); font-display: swap; }
+@font-face { font-family: "Martian Mono"; font-weight: 400; src: url("/fonts/MartianMono-Regular.ttf"); font-display: swap; }
+:root {
+  color-scheme: dark;
+  --void: #060709; --surface: #0c0d11; --ink: #f3f4f6; --ink-muted: #a9acb3; --ink-dim: #8b8f98;
+  --rule: rgba(243,244,246,.18); --rule-soft: rgba(243,244,246,.09);
+  --accent: #8d90ff; --straw: #e8c77e; --thermal: #f0713a; --bronze: #a9683a; --plum: #b06f99; --steel: #7f8a99;
+  --font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --gutter: clamp(20px, 4vw, 72px);
+}
+* { box-sizing: border-box; border-radius: 0; }
+html, body { background: var(--void); color: var(--ink); margin: 0; }
+body { font-family: var(--font-sans); font-size: 16px; line-height: 1.5; letter-spacing: -.01em; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--ink); color: var(--void); padding: 8px 14px; }
+.skip:focus { left: var(--gutter); }
+.wrap { max-width: 1680px; margin: 0 auto; padding: 0 var(--gutter) 96px; }
+header { padding: 44px 0 28px; display: grid; gap: 14px; }
+.page-title { font-size: clamp(34px, 3.4vw, 54px); line-height: 1.02; letter-spacing: -.04em; font-weight: 500; margin: 0; }
+.page-desc { font-size: 16px; line-height: 1.55; color: var(--ink-muted); margin: 0; max-width: 78ch; }
+.edge { height: 1px; background: linear-gradient(90deg, #e8c77e 0%, #d9a55b 20%, #a9683a 40%, #7d4766 60%, #8d90ff 80%, #5d6673 100%); }
+.label { font-family: var(--font-mono); font-size: 11.5px; line-height: 1.4; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* state strip: every state is a shape and words, never colour alone */
+.strip { display: flex; flex-wrap: wrap; gap: 14px 44px; padding: 22px 0; border-bottom: 1px solid var(--rule); align-items: center; }
+.state { display: inline-flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.shape { width: 14px; height: 14px; flex: none; display: inline-block; }
+.shape.ok { background: var(--accent); }
+.shape.rec { background: var(--thermal); border-radius: 50%; animation: pulse 1.2s ease-in-out infinite; }
+.shape.warn { border: 2px solid var(--straw); }
+.shape.off { border: 2px solid var(--ink-dim); transform: rotate(45deg); width: 11px; height: 11px; }
+.t-rec { color: var(--thermal); } .t-warn { color: var(--straw); } .t-off { color: var(--ink-muted); }
+@keyframes pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .shape.rec { animation: none; } }
+
+main { display: grid; grid-template-columns: repeat(12, 1fr); gap: 56px 48px; padding-top: 40px; }
+section { grid-column: span 6; min-width: 0; }
+section.wide { grid-column: span 12; }
+@media (max-width: 1100px) { section { grid-column: span 12; } }
+.section-head { display: grid; gap: 8px; margin-bottom: 18px; }
+.marker { display: flex; align-items: center; gap: 10px; }
+.marker::before { content: ""; width: 8px; height: 8px; background: var(--accent); flex: none; }
+.section-title { font-size: 28px; line-height: 1.08; letter-spacing: -.03em; font-weight: 500; margin: 0; }
+.section-desc { font-size: 15px; line-height: 1.5; color: var(--ink-muted); margin: 0; max-width: 68ch; }
+
+dl.rows { margin: 0; display: grid; grid-template-columns: minmax(150px, max-content) 1fr; }
+dl.rows dt, dl.rows dd { margin: 0; padding: 9px 0; border-bottom: 1px solid var(--rule-soft); }
+dl.rows dt { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); padding-right: 28px; align-self: baseline; padding-top: 12px; }
+dl.rows dd { font-size: 16px; overflow-wrap: anywhere; }
+
+.readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 26px 28px; margin-bottom: 22px; }
+.readout .fig { font-size: clamp(30px, 2.6vw, 44px); line-height: 1; letter-spacing: -.05em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.readout .unit { font-size: .42em; letter-spacing: -.02em; margin-left: .2em; color: var(--ink-muted); }
+.readout .cap { font-size: 13.5px; color: var(--ink-muted); margin-top: 6px; }
+
+.chart { position: relative; border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); height: 150px; margin-top: 6px; }
+.chart canvas { width: 100%; height: 100%; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 22px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-muted); margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; margin-right: 8px; vertical-align: middle; background: var(--c); }
+.legend span.dash::before { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); }
+
+/* latency bar: each part has its own pattern as well as a colour, and is listed with its number below */
+.bar { display: flex; height: 26px; margin: 4px 0 14px; background: var(--surface); border-left: 1px solid var(--rule); }
+.bar div { height: 100%; min-width: 0; }
+.p-link { background: var(--accent); }
+.p-wait { background: repeating-linear-gradient(135deg, var(--straw) 0 5px, #7c6a3f 5px 10px); }
+.p-step { background: var(--thermal); }
+.p-proc { background: repeating-linear-gradient(90deg, var(--plum) 0 3px, #5a3a50 3px 6px); }
+.p-disp { background: repeating-linear-gradient(45deg, var(--steel) 0 2px, #2c3138 2px 8px); }
+table { border-collapse: collapse; width: 100%; }
+caption { text-align: left; color: var(--ink-muted); font-size: 14px; padding-bottom: 10px; }
+th { text-align: left; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; font-weight: 400; color: var(--ink-dim); padding: 0 16px 10px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td { padding: 10px 16px 10px 0; border-bottom: 1px solid var(--rule-soft); font-size: 15px; vertical-align: baseline; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.swatch { display: inline-block; width: 14px; height: 12px; margin-right: 10px; vertical-align: -1px; }
+.scroll { overflow-x: auto; }
+.tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.tag::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; }
+.tag.good::before { background: var(--accent); } .tag.bad { color: var(--thermal); } .tag.bad::before { background: var(--thermal); border-radius: 50%; }
+.tag.none { color: var(--ink-dim); } .tag.none::before { border: 1px solid var(--ink-dim); }
+td a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; white-space: nowrap; }
+td a:hover { color: var(--accent); }
+.note { font-size: 13.5px; color: var(--ink-dim); line-height: 1.5; margin-top: 12px; max-width: 70em; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<a class="skip" href="#recordings">Skip to recordings</a>
+<div class="wrap">
+  <header>
+    <div class="label" id="server-line">Teleoperation server</div>
+    <h1 class="page-title">{{TITLE}}</h1>
+    <p class="page-desc">Live status of the teleoperation server on this computer: the headset link, the session, how fast
+      the simulator and the network run, where the latency goes, and the recorded takes. Updates once per second.</p>
+  </header>
+  <div class="edge" aria-hidden="true"></div>
+
+  <div class="strip" role="status" aria-live="polite" aria-atomic="true">
+    <span class="state" id="st-page"><span class="shape warn" aria-hidden="true"></span><span>Connecting to the server</span></span>
+    <span class="state" id="st-headset"></span>
+    <span class="state" id="st-session"></span>
+    <span class="state" id="st-rec"></span>
+  </div>
+
+  <main>
+    <section aria-labelledby="h-conn">
+      <div class="section-head"><div class="marker label">01</div>
+        <h2 class="section-title" id="h-conn">Connection</h2>
+        <p class="section-desc">The headset and its link to this computer.</p></div>
+      <dl class="rows" id="conn"></dl>
+    </section>
+
+    <section aria-labelledby="h-sess">
+      <div class="section-head"><div class="marker label">02</div>
+        <h2 class="section-title" id="h-sess">Session</h2>
+        <p class="section-desc">What is running and what is being recorded.</p></div>
+      <dl class="rows" id="sess"></dl>
+    </section>
+
+    <section aria-labelledby="h-speed">
+      <div class="section-head"><div class="marker label">03</div>
+        <h2 class="section-title" id="h-speed">Speeds</h2>
+        <p class="section-desc">Simulator speed against real time (it drops in heavy contact), network traffic, and the
+          headset's frame rate.</p></div>
+      <div class="readouts" id="speed"></div>
+      <div class="label">Simulator real-time factor, last <span id="span-a">10</span> minutes (1.0 = real time)</div>
+      <div class="chart"><canvas id="c-rtf" role="img" aria-label="Line chart of the simulator real-time factor over time. The current value is in the readout above."></canvas></div>
+      <div class="legend"><span style="--c:#f0713a">real-time factor</span><span class="dash" style="--c:#8b8f98">1.0 = real time</span><span style="--c:#e8c77e">contact force (scaled)</span></div>
+      <div class="label" style="margin-top:22px">Network, Mbit/s</div>
+      <div class="chart" style="height:110px"><canvas id="c-net" role="img" aria-label="Line chart of the network traffic to and from the headset over time. Current values are in the readouts above."></canvas></div>
+      <div class="legend"><span style="--c:#8d90ff">to the headset</span><span class="dash" style="--c:#e8c77e">from the headset</span></div>
+    </section>
+
+    <section aria-labelledby="h-lat">
+      <div class="section-head"><div class="marker label">04</div>
+        <h2 class="section-title" id="h-lat">Latency</h2>
+        <p class="section-desc">From moving a controller to seeing the simulator's answer in the headset, and what each
+          part contributes (medians over the last second).</p></div>
+      <div class="readouts" id="lat-read"></div>
+      <div class="bar" id="lat-bar" role="img" aria-label="Stacked bar of the latency parts; the table below has the numbers."></div>
+      <div class="scroll"><table id="lat-table">
+        <caption class="sr">Latency parts</caption>
+        <thead><tr><th scope="col">Part</th><th scope="col" class="n">ms</th><th scope="col">What it is</th></tr></thead>
+        <tbody></tbody></table></div>
+      <div class="label" style="margin-top:22px">Total latency and its parts, last <span id="span-b">10</span> minutes (ms)</div>
+      <div class="chart"><canvas id="c-lat" role="img" aria-label="Line chart of the total latency and its parts over time. Current values are in the table above."></canvas></div>
+      <div class="legend"><span style="--c:#f3f4f6">total</span><span style="--c:#f0713a">simulator step</span><span class="dash" style="--c:#e8c77e">wait for the step</span><span style="--c:#8d90ff">network + pickup</span></div>
+    </section>
+
+    <section class="wide" aria-labelledby="h-rec" id="recordings" tabindex="-1">
+      <div class="section-head"><div class="marker label">05</div>
+        <h2 class="section-title" id="h-rec">Recordings</h2>
+        <p class="section-desc" id="rec-desc">Takes recorded from the headset.</p></div>
+      <div class="scroll"><table id="rec-table"><caption id="rec-cap"></caption><thead></thead><tbody></tbody></table></div>
+      <p class="note" id="rec-note"></p>
+    </section>
+  </main>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const f = (v, d = 1, dash = "–") => (v === null || v === undefined || Number.isNaN(v)) ? dash : Number(v).toFixed(d);
+const dur = (s) => { if (s == null) return "–"; s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + " h " : "") + (h || m ? m + " min " : "") + (s % 60) + " s"; };
+let history = [], lastEvent = 0;
+
+function state(el, shape, cls, text) { el.innerHTML = `<span class="shape ${shape}" aria-hidden="true"></span><span class="${cls}">${esc(text)}</span>`; }
+function rows(el, list) { el.innerHTML = list.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join(""); }
+function readouts(el, list) { el.innerHTML = list.map(([fig, unit, cap]) => `<div class="readout"><div class="fig num">${esc(fig)}<span class="unit">${esc(unit)}</span></div><div class="cap">${esc(cap)}</div></div>`).join(""); }
+
+function draw(id, series, opts = {}) {
+  const cv = $(id), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext("2d"), W = cv.width, H = cv.height;
+  g.clearRect(0, 0, W, H);
+  if (!history.length) return;
+  const t1 = history[history.length - 1].t, t0 = t1 - (opts.span || 600);
+  let max = opts.min || 1e-9;
+  for (const s of series) for (const p of history) { const v = s.get(p); if (v != null && p.t >= t0) max = Math.max(max, v); }
+  max *= 1.12;
+  g.font = `${11 * dpr}px "Martian Mono", monospace`; g.fillStyle = "#8b8f98"; g.textBaseline = "top";
+  g.strokeStyle = "rgba(243,244,246,.09)"; g.lineWidth = 1;
+  for (let i = 1; i <= 2; i++) { const y = H - H * i / 2 / 1.12; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); g.fillText((max / 1.12 * i / 2).toFixed(opts.digits ?? 1), 6 * dpr, y + 3 * dpr); }
+  if (opts.ref != null && opts.ref < max) { const y = H - H * opts.ref / max; g.setLineDash([4 * dpr, 4 * dpr]); g.strokeStyle = "#8b8f98"; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); g.setLineDash([]); }
+  if (opts.shade) { g.fillStyle = "rgba(240,113,58,.13)"; for (const p of history) if (p.rec && p.t >= t0) { const x = W * (p.t - t0) / (t1 - t0); g.fillRect(x - W / (t1 - t0), 0, W / (t1 - t0) + 1, H); } }
+  for (const s of series) {
+    g.strokeStyle = s.color; g.lineWidth = (s.width || 1.6) * dpr; g.setLineDash(s.dash ? [5 * dpr, 4 * dpr] : []);
+    g.beginPath(); let pen = false;
+    for (const p of history) { const v = s.get(p); if (p.t < t0) continue; if (v == null) { pen = false; continue; }
+      const x = W * (p.t - t0) / (t1 - t0), y = H - H * Math.min(v, max) / max; pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true; }
+    g.stroke();
+  }
+  g.setLineDash([]);
+}
+
+function render(s) {
+  lastEvent = Date.now();
+  if (s.error) { state($("st-page"), "warn", "t-warn", "Server error: " + s.error); return; }
+  $("server-line").textContent = `${s.server || "Teleoperation server"}  ·  port ${s.port}  ·  up ${dur(s.uptime_s)}`;
+  state($("st-page"), "ok", "", "Server running");
+  const cl = s.clients || [], c = cl.find((x) => x.controlling) || cl[0];
+  if (!c) state($("st-headset"), "off", "t-off", "No headset connected");
+  else if (!c.sending) state($("st-headset"), "warn", "t-warn", "Headset connected, not worn (no input)");
+  else state($("st-headset"), "ok", "", `Headset connected by ${c.link.split(" ")[0]}`);
+  const ses = s.session || {}, sim = s.sim || {}, lat = s.latency_ms || {};
+  const st = ses.state || "idle";
+  if (st === "recording") { state($("st-session"), "ok", "", "Session running"); state($("st-rec"), "rec", "t-rec", ses.state_text || "REC"); }
+  else { state($("st-session"), st === "running" ? "ok" : (st === "paused" ? "warn" : "off"), st === "running" ? "" : (st === "paused" ? "t-warn" : "t-off"), ses.state_text || ("Session " + st)); state($("st-rec"), "off", "t-off", "Not recording"); }
+
+  const pct = (v) => v == null ? "–" : (100 * v).toFixed(v > 0 && v < 0.001 ? 2 : 1) + " %";
+  rows($("conn"), c ? [
+    ["Headset", esc(c.sending ? "connected and sending" : "connected, not worn (no input)")],
+    ["Link", esc(c.link)], ["Device", esc(c.device + "  (" + c.name + ")")], ["Client address", `<span class="mono">${esc(c.address)}</span>`],
+    ["Connected for", esc(dur(c.connected_s))], ["Display", esc(f(c.display_hz, 0) + " Hz")],
+    ["Packet loss", esc(`to the headset ${pct(s.down_loss)},  from the headset ${pct(s.up_loss)}`)],
+    ["Headset view", esc(c.edit_mode ? "menu open (robot paused)" : "driving") + (c.scale ? esc(`,  scene scale ${f(c.scale, 2)}`) : "")],
+    ["Other clients", esc(cl.length > 1 ? cl.filter((x) => x !== c).map((x) => `${x.name} ${x.address}`).join(", ") : "none")],
+  ] : [["Headset", "not connected"], ["How to connect", "Start the Quest Teleop app in the headset (Library, Unknown sources). Same Wi-Fi as this computer, or the USB cable."], ["Listening on", `<span class="mono">TCP + UDP ${esc(s.port)}</span>`]]);
+  rows($("sess"), (ses.rows || []).map(([k, v]) => [k, esc(v)]).concat(ses.rows ? [] : [["Scene", esc(s.scene || "–")]]));
+
+  readouts($("speed"), [
+    [f(sim.rtf, 2), "x", "simulator vs real time"], [f(sim.steps_per_s, 0), "/s", "simulator steps"],
+    [f(s.headset_fps, 0), "fps", "headset frames (input rate)"], [f(s.down_mbit, 2), "Mbit/s", `to headset, ${f(s.down_packets_per_s, 0)} packets/s`],
+    [f(s.up_mbit, 2), "Mbit/s", `from headset, ${f(s.up_packets_per_s, 0)} packets/s`]]);
+  readouts($("lat-read"), [[f(lat.total, 0), "ms", "total, median"], [f(lat.total_p95, 0), "ms", "total, 95th percentile"],
+    [lat.total != null && lat.display != null ? f(lat.total + lat.display, 0) : "–", "ms", "with the display's refresh"]]);
+  const parts = [["p-link", "Network + pickup", lat.link, "both network directions, plus the headset taking the new state at its next frame"],
+    ["p-wait", "Wait for the step", lat.wait, "the controller sample waiting for the next simulator step to start"],
+    ["p-step", "Simulator step", lat.sim_step, "computing one simulator step"],
+    ["p-proc", "Server processing", lat.processing, "reading the controllers, encoding and sending the state, recording"],
+    ["p-disp", "Display", lat.display, "one refresh of the headset display (not measured: 1000 / refresh rate)"]];
+  const sum = parts.reduce((a, p) => a + (p[2] || 0), 0);
+  $("lat-bar").innerHTML = (sum > 0 && lat.total != null) ? parts.map((p) => `<div class="${p[0]}" style="width:${100 * (p[2] || 0) / sum}%" title="${esc(p[1])}: ${f(p[2], 1)} ms"></div>`).join("") : "";
+  $("lat-table").tBodies[0].innerHTML = parts.map((p) => `<tr><th scope="row" style="text-transform:none;font-family:var(--font-sans);font-size:15px;color:var(--ink);letter-spacing:-.01em;border-bottom:1px solid var(--rule-soft);padding:10px 16px 10px 0"><span class="swatch ${p[0]}" aria-hidden="true"></span>${esc(p[1])}</th><td class="n">${f(p[2], 1)}</td><td style="color:var(--ink-muted)">${esc(p[3])}</td></tr>`).join("")
+    + `<tr><th scope="row" style="text-transform:none;font-family:var(--font-sans);font-size:15px;color:var(--ink);letter-spacing:-.01em;padding:10px 16px 10px 0">Total measured by the headset</th><td class="n">${f(lat.total, 1)}</td><td style="color:var(--ink-muted)">controller sample to the resulting state in the headset (the first four parts)</td></tr>`;
+
+  const rec = s.recordings;
+  if (rec) {
+    $("rec-desc").textContent = `Takes recorded from the headset, newest first. Folder: ${rec.dir}`;
+    $("rec-cap").textContent = `${rec.rows.length} takes` + (rec.summary ? `, ${rec.summary}` : "");
+    $("rec-table").tHead.innerHTML = "<tr>" + rec.columns.map((c) => `<th scope="col" class="${c.num ? "n" : ""}">${esc(c.name)}</th>`).join("") + "</tr>";
+    $("rec-table").tBodies[0].innerHTML = rec.rows.length ? rec.rows.map((r) => "<tr>" + r.map((v, i) => {
+      const col = rec.columns[i];
+      if (col.link) return `<td><a href="${esc(v.href)}" aria-label="${esc(v.label || v.text)}">${esc(v.text)}</a></td>`;
+      if (col.tag) { const k = v && v.kind || "none"; return `<td><span class="tag ${k}">${esc(v && v.text || "–")}</span></td>`; }
+      return `<td class="${col.num ? "n" : ""}${col.mono ? " mono" : ""}">${esc(v ?? "–")}</td>`; }).join("") + "</tr>").join("")
+      : `<tr><td colspan="${rec.columns.length}" style="color:var(--ink-muted)">No takes yet. In the headset press B (right controller), or open the menu and choose "Start recording".</td></tr>`;
+    $("rec-note").textContent = rec.note || "";
+  }
+  if (s.point) { if (!history.length || history[history.length - 1].t !== s.point.t) history.push(s.point); if (history.length > 900) history.shift(); }
+  charts();
+}
+function charts() {
+  draw("c-rtf", [{get: (p) => p.contact == null ? null : Math.min(p.contact, 20) / 20, color: "#e8c77e", width: 1},
+                 {get: (p) => p.rtf, color: "#f0713a"}], {ref: 1.0, min: 1.0, digits: 2, shade: true});
+  draw("c-net", [{get: (p) => p.down, color: "#8d90ff"}, {get: (p) => p.up, color: "#e8c77e", dash: true}], {min: 0.2, digits: 2});
+  draw("c-lat", [{get: (p) => p.link, color: "#8d90ff"}, {get: (p) => p.wait, color: "#e8c77e", dash: true}, {get: (p) => p.step, color: "#f0713a"},
+                 {get: (p) => p.total, color: "#f3f4f6", width: 2}], {min: 20, digits: 0, shade: true});
+}
+window.addEventListener("resize", charts);
+fetch("/api/history").then((r) => r.json()).then((h) => { history = h.filter((p) => p && p.t); charts(); }).catch(() => {});
+function connect() {
+  const es = new EventSource("/events");
+  es.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch (err) { console.error(err); } };
+  es.onerror = () => { state($("st-page"), "warn", "t-warn", "Server not reachable (stopped?). Retrying"); };
+}
+connect();
+setInterval(() => { if (lastEvent && Date.now() - lastEvent > 5000) state($("st-page"), "warn", "t-warn", "No update for " + Math.round((Date.now() - lastEvent) / 1000) + " s"); }, 2000);
+</script>
+</body>
+</html>

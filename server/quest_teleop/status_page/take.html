@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Take trajectory</title>
+<style>
+@font-face { font-family: "Host Grotesk"; font-weight: 400; src: url("/fonts/HostGrotesk-Regular.ttf"); font-display: swap; }
+@font-face { font-family: "Host Grotesk"; font-weight: 500; src: url("/fonts/HostGrotesk-Medium.ttf"); font-display: swap; }
+@font-face { font-family: "Martian Mono"; font-weight: 400; src: url("/fonts/MartianMono-Regular.ttf"); font-display: swap; }
+:root {
+  color-scheme: dark;
+  --void: #060709; --surface: #0c0d11; --ink: #f3f4f6; --ink-muted: #a9acb3; --ink-dim: #8b8f98;
+  --rule: rgba(243,244,246,.18); --rule-soft: rgba(243,244,246,.09);
+  --accent: #8d90ff; --straw: #e8c77e; --thermal: #f0713a; --plum: #b06f99;
+  --font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --gutter: clamp(20px, 4vw, 72px);
+}
+* { box-sizing: border-box; border-radius: 0; }
+[hidden] { display: none !important; }
+html, body { background: var(--void); color: var(--ink); margin: 0; }
+body { font-family: var(--font-sans); font-size: 16px; line-height: 1.5; letter-spacing: -.01em; -webkit-font-smoothing: antialiased; }
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wrap { max-width: 1680px; margin: 0 auto; padding: 0 var(--gutter) 96px; }
+header { padding: 36px 0 26px; display: grid; gap: 14px; }
+.label { font-family: var(--font-mono); font-size: 11.5px; line-height: 1.4; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); }
+.page-title { font-size: clamp(34px, 3.4vw, 54px); line-height: 1.02; letter-spacing: -.04em; font-weight: 500; margin: 0; }
+.page-desc { font-size: 16px; color: var(--ink-muted); margin: 0; max-width: 78ch; }
+.edge { height: 1px; background: linear-gradient(90deg, #e8c77e 0%, #d9a55b 20%, #a9683a 40%, #7d4766 60%, #8d90ff 80%, #5d6673 100%); }
+main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 44px 48px; padding-top: 34px; }
+@media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+.marker { display: flex; align-items: center; gap: 10px; }
+.marker::before { content: ""; width: 8px; height: 8px; background: var(--accent); flex: none; }
+h2 { font-size: 28px; line-height: 1.08; letter-spacing: -.03em; font-weight: 500; margin: 8px 0 6px; }
+.section-desc { font-size: 15px; color: var(--ink-muted); margin: 0 0 16px; max-width: 68ch; }
+#view { width: 100%; height: min(62vh, 640px); min-height: 360px; display: block; background: var(--surface); border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); cursor: grab; touch-action: none; }
+#view:active { cursor: grabbing; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin: 16px 0 6px; }
+button, select { font: inherit; color: var(--ink); background: transparent; border: 1px solid rgba(243,244,246,.36); padding: 8px 16px; min-height: 40px; cursor: pointer; }
+button.primary { background: var(--ink); color: var(--void); border-color: var(--ink); font-weight: 500; min-width: 96px; }
+button:hover, select:hover { border-color: var(--accent); }
+input[type=range] { flex: 1 1 260px; min-width: 200px; accent-color: #8d90ff; height: 28px; }
+label.chk { display: inline-flex; gap: 8px; align-items: center; font-size: 15px; color: var(--ink-muted); }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: #8d90ff; }
+.time { font-family: var(--font-mono); font-size: 13px; min-width: 15ch; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 26px; font-size: 14px; color: var(--ink-muted); margin: 14px 0 0; padding: 0; list-style: none; }
+.legend svg { vertical-align: -4px; margin-right: 8px; }
+#timeline { width: 100%; height: 150px; display: block; margin-top: 8px; border-left: 1px solid var(--rule); border-bottom: 1px solid var(--rule); cursor: pointer; }
+.hint { font-size: 13.5px; color: var(--ink-dim); margin-top: 10px; }
+dl.rows { margin: 0; display: grid; grid-template-columns: minmax(130px, max-content) 1fr; }
+dl.rows dt, dl.rows dd { margin: 0; padding: 9px 0; border-bottom: 1px solid var(--rule-soft); }
+dl.rows dt { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); padding: 12px 24px 9px 0; }
+dl.rows dd { font-size: 16px; overflow-wrap: anywhere; }
+table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+th { text-align: left; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; font-weight: 400; color: var(--ink-dim); padding: 0 14px 10px 0; border-bottom: 1px solid var(--rule); }
+td, tbody th { padding: 10px 14px 10px 0; border-bottom: 1px solid var(--rule-soft); font-size: 15px; }
+tbody th { font-family: var(--font-sans); text-transform: none; letter-spacing: -.01em; color: var(--ink); font-size: 15px; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.now { display: grid; gap: 4px; margin-top: 14px; font-size: 15px; }
+.now .row { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+.now .name { font-weight: 500; min-width: 7ch; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; }
+.err { color: var(--thermal); font-size: 18px; padding: 40px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="label"><a href="/">Status</a> &nbsp;/&nbsp; Recording</div>
+    <h1 class="page-title" id="title">Take</h1>
+    <p class="page-desc" id="desc">Loading the take.</p>
+  </header>
+  <div class="edge" aria-hidden="true"></div>
+  <div id="error" class="err" role="alert" hidden></div>
+  <main id="main" hidden>
+    <div>
+      <section aria-labelledby="h-view">
+        <div class="marker label">01</div>
+        <h2 id="h-view">Trajectory</h2>
+        <p class="section-desc">The path of each tool through space. Markers along the path show what the gripper was doing.</p>
+        <canvas id="view" tabindex="0" role="img" aria-describedby="view-help now"></canvas>
+        <div class="controls">
+          <button class="primary" id="play" aria-pressed="false">Play</button>
+          <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Time in the take">
+          <span class="time" id="time" aria-hidden="true">0.0 / 0.0 s</span>
+          <label class="chk">Speed
+            <select id="speed" aria-label="Playback speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select></label>
+          <label class="chk"><input type="checkbox" id="show-ctrl"> Controller paths</label>
+          <button id="reset">Reset view</button>
+        </div>
+        <ul class="legend" id="legend" aria-label="Legend"></ul>
+        <p class="hint" id="view-help">Drag to turn, shift-drag (or right-drag) to move, wheel to zoom. Keyboard, with the view
+          focused: arrow keys turn, shift + arrows move, + and - zoom, space plays, Home and End jump to the ends.</p>
+        <div class="now" id="now" aria-live="off"></div>
+      </section>
+      <section aria-labelledby="h-time" style="margin-top:44px">
+        <div class="marker label">02</div>
+        <h2 id="h-time">Gripper over time</h2>
+        <p class="section-desc">Per tool: the gripper state as a band (the same shapes as on the path are listed in the
+          legend above) and the opening as a line. Click to jump to a time.</p>
+        <canvas id="timeline" role="img" aria-label="Timeline of each tool's gripper state and opening. The table of properties lists how often each gripper closed and opened."></canvas>
+      </section>
+    </div>
+    <div>
+      <section aria-labelledby="h-prop">
+        <div class="marker label">03</div>
+        <h2 id="h-prop">Properties</h2>
+        <p class="section-desc">What this take contains.</p>
+        <dl class="rows" id="props"></dl>
+      </section>
+      <section aria-labelledby="h-tools" style="margin-top:44px">
+        <div class="marker label">04</div>
+        <h2 id="h-tools">Tools</h2>
+        <p class="section-desc">Per tool: how far it travelled and what its gripper did.</p>
+        <table id="tools"><thead><tr><th scope="col">Tool</th><th scope="col" class="n">Path</th><th scope="col" class="n">Closed</th><th scope="col" class="n">Opened</th><th scope="col" class="n">Time closed</th><th scope="col" class="n">Following</th><th scope="col" class="n">Lost</th></tr></thead><tbody></tbody></table>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const COLORS = ["#8d90ff", "#e8c77e", "#f0713a", "#b06f99"], DASH = [[], [7, 5], [2, 4], [10, 4, 2, 4]];
+const GRIP = ["open", "closing", "closed", "opening"];
+let D = null, cur = 0, playing = false, lastTs = 0, cam = null, cam0 = null, B = null;
+
+// ---- marker shapes: one per gripper state (never colour alone)
+function shape(g, kind, x, y, r, color) {
+  g.lineWidth = 1.6; g.strokeStyle = color; g.fillStyle = color; g.beginPath();
+  if (kind === 0) { g.arc(x, y, r, 0, 6.2832); g.fillStyle = "#0c0d11"; g.fill(); g.stroke(); }                 // open: hollow circle
+  else if (kind === 1) { g.moveTo(x - r, y - r * .8); g.lineTo(x + r, y - r * .8); g.lineTo(x, y + r); g.closePath(); g.fill(); }   // closing: filled triangle, point down
+  else if (kind === 2) { g.rect(x - r * .85, y - r * .85, r * 1.7, r * 1.7); g.fill(); }                          // closed: filled square
+  else if (kind === 3) { g.moveTo(x - r, y + r * .8); g.lineTo(x + r, y + r * .8); g.lineTo(x, y - r); g.closePath(); g.fillStyle = "#0c0d11"; g.fill(); g.stroke(); } // opening: hollow triangle, point up
+  else { g.moveTo(x - r, y - r); g.lineTo(x + r, y + r); g.moveTo(x + r, y - r); g.lineTo(x - r, y + r); g.lineWidth = 2.4; g.stroke(); }  // lost: cross
+}
+function shapeSvg(kind, color) {
+  const s = ['<circle cx="9" cy="9" r="6" fill="none" stroke="C" stroke-width="1.8"/>', '<path d="M2 3h14L9 16z" fill="C"/>',
+             '<rect x="3" y="3" width="12" height="12" fill="C"/>', '<path d="M2 15h14L9 2z" fill="none" stroke="C" stroke-width="1.8"/>',
+             '<path d="M3 3l12 12M15 3L3 15" stroke="C" stroke-width="2.4"/>'][kind];
+  return `<svg width="18" height="18" aria-hidden="true">${s.replace(/C/g, color)}</svg>`;
+}
+
+// ---- camera: orbit about a target; the data's up axis is drawn up
+function toView(p) { const u = D.up_axis; return u === 2 ? [p[0], p[2], -p[1]] : (u === 0 ? [p[1], p[0], p[2]] : [p[0], p[1], p[2]]); }
+function project(v, W, H) {
+  const x = v[0] - cam.t[0], y = v[1] - cam.t[1], z = v[2] - cam.t[2];
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const x1 = cy * x + sy * z, z1 = -sy * x + cy * z, y2 = cp * y - sp * z1, z2 = sp * y + cp * z1 + cam.dist;
+  if (z2 < 0.02 * cam.dist) return null;
+  const f = 1.25 * Math.min(W, H) / z2;
+  return [W / 2 + f * x1, H / 2 - f * y2, z2];
+}
+function fit() {
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  // frame the tools that moved (a tool that stood still far away would shrink everything else)
+  const moved = D.tools.filter((tl) => tl.path_m > 0.01), use = moved.length ? moved : D.tools;
+  for (const tl of use) for (const p of tl.vp) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
+  const size = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], 0.05);
+  B = {lo, hi, size};
+  // start with the paths' main horizontal direction across the screen (plus a little turn for depth)
+  let mx = 0, mz = 0, n = 0, sxx = 0, szz = 0, sxz = 0;
+  for (const tl of use) for (const p of tl.vp) { mx += p[0]; mz += p[2]; n++; }
+  mx /= n; mz /= n;
+  for (const tl of use) for (const p of tl.vp) { const a = p[0] - mx, b = p[2] - mz; sxx += a * a; szz += b * b; sxz += a * b; }
+  const yaw0 = 0.5 * Math.atan2(2 * sxz, sxx - szz) + 0.35;
+  cam = {yaw: yaw0, pitch: 0.5, dist: size * 2.3, t: [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2]};
+  cam0 = JSON.parse(JSON.stringify(cam));
+}
+function niceStep(size) { const raw = size / 5, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw); }
+
+function drawView() {
+  const cv = $("view"), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext("2d"), W = r.width, H = r.height;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  // ground grid at the lowest point of the paths, with a scale label
+  const st = niceStep(B.size * 1.6), y0 = B.lo[1], gx0 = Math.floor((B.lo[0] - B.size * .3) / st) * st, gz0 = Math.floor((B.lo[2] - B.size * .3) / st) * st;
+  const nx = Math.ceil((B.hi[0] - gx0 + B.size * .3) / st), nz = Math.ceil((B.hi[2] - gz0 + B.size * .3) / st);
+  g.lineWidth = 1; g.strokeStyle = "rgba(243,244,246,.10)";
+  const line = (a, b) => { const p = project(a, W, H), q = project(b, W, H); if (p && q) { g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); } };
+  for (let i = 0; i <= nx; i++) line([gx0 + i * st, y0, gz0], [gx0 + i * st, y0, gz0 + nz * st]);
+  for (let i = 0; i <= nz; i++) line([gx0, y0, gz0 + i * st], [gx0 + nx * st, y0, gz0 + i * st]);
+  g.font = '11px "Martian Mono", monospace'; g.fillStyle = "#8b8f98";
+  const lab = project([gx0, y0, gz0 + nz * st], W, H);
+  if (lab) g.fillText(`grid ${st >= 1 ? st + " m" : (st * 100).toFixed(st < 0.01 ? 1 : 0) + " cm"}`, lab[0] + 6, lab[1] + 14);
+  // axes of the recorded coordinates, at the grid corner
+  const o = [gx0, y0, gz0], al = st * 0.8, names = D.up_axis === 2 ? ["x", "z", "-y"] : (D.up_axis === 0 ? ["y", "x", "z"] : ["x", "y", "z"]);
+  [[1, 0, 0], [0, 1, 0], [0, 0, 1]].forEach((a, k) => { g.strokeStyle = "rgba(243,244,246,.55)"; g.lineWidth = 1.5; const e = [o[0] + a[0] * al, o[1] + a[1] * al, o[2] + a[2] * al];
+    line(o, e); const p = project(e, W, H); if (p) { g.fillStyle = "#a9acb3"; g.fillText(names[k], p[0] + 4, p[1] - 4); } });
+  const showCtrl = $("show-ctrl").checked;
+  D.tools.forEach((tl, ti) => {
+    const col = COLORS[ti % 4], pts = tl.vp.map((p) => project(p, W, H));
+    // vertical drop lines to the ground give depth
+    g.strokeStyle = "rgba(243,244,246,.07)"; g.lineWidth = 1;
+    for (let i = 0; i < pts.length; i += Math.max(1, Math.round(pts.length / 40))) { const q = project([tl.vp[i][0], y0, tl.vp[i][2]], W, H); if (pts[i] && q) { g.beginPath(); g.moveTo(pts[i][0], pts[i][1]); g.lineTo(q[0], q[1]); g.stroke(); } }
+    if (showCtrl && tl.vc) { g.strokeStyle = col; g.globalAlpha = .35; g.lineWidth = 1; g.setLineDash([2, 3]); g.beginPath(); let pen = false;
+      for (const c of tl.vc) { const p = c && project(c, W, H); if (!p) { pen = false; continue; } pen ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); pen = true; } g.stroke(); g.globalAlpha = 1; }
+    // the path: the part already played is bright, the rest dim; thicker while the gripper is closed
+    for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; if (!a || !b) continue;
+      g.globalAlpha = i <= cur ? 1 : .5; g.strokeStyle = col; g.lineWidth = tl.grip && tl.grip[i] === 2 ? 3.2 : 1.6; g.setLineDash(DASH[ti % 4]);
+      g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    g.setLineDash([]); g.globalAlpha = 1;
+    // gripper markers: at every change of state, and thinly in between
+    if (tl.grip) { const every = Math.max(1, Math.round(pts.length / 36));
+      for (let i = 0; i < pts.length; i++) { const ch = i === 0 || tl.grip[i] !== tl.grip[i - 1]; if (!pts[i] || (!ch && i % every)) continue;
+        g.globalAlpha = i <= cur ? 1 : .45; shape(g, tl.grip[i], pts[i][0], pts[i][1], ch ? 6.5 : 4, col); } g.globalAlpha = 1; }
+    if (tl.state) for (let i = 1; i < pts.length; i++) if (tl.state[i] === 2 && tl.state[i - 1] !== 2 && pts[i]) shape(g, 4, pts[i][0], pts[i][1], 6, "#f0713a");
+    const p = pts[Math.min(cur, pts.length - 1)];
+    if (p) { g.strokeStyle = "#f3f4f6"; g.lineWidth = 2; g.beginPath(); g.arc(p[0], p[1], 11, 0, 6.2832); g.stroke();
+      shape(g, tl.grip ? tl.grip[cur] : 0, p[0], p[1], 6, col);
+      g.font = '500 14px "Host Grotesk", sans-serif'; g.fillStyle = "#f3f4f6"; g.fillText(tl.name, p[0] + 16, p[1] - 10); }
+    const s0 = pts[0], s1 = pts[pts.length - 1]; g.font = '11px "Martian Mono", monospace'; g.fillStyle = "#8b8f98";
+    if (s0) g.fillText("START", s0[0] + 9, s0[1] + 16); if (s1) g.fillText("END", s1[0] + 9, s1[1] + 16);
+  });
+}
+
+function drawTimeline() {
+  const cv = $("timeline"), r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const g = cv.getContext("2d"), W = r.width, H = r.height, n = D.t.length, T = D.t[n - 1] || 1;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const rowH = H / D.tools.length;
+  D.tools.forEach((tl, ti) => {
+    const y = ti * rowH, col = COLORS[ti % 4], bandH = 14, by = y + 20;
+    g.font = '11px "Martian Mono", monospace'; g.fillStyle = "#a9acb3"; g.fillText(tl.name.toUpperCase(), 6, y + 13);
+    if (tl.grip) for (let i = 0; i < n - 1; i++) { const x0 = W * D.t[i] / T, x1 = W * D.t[i + 1] / T, k = tl.grip[i];
+      // open: thin outline; closing: half-height hatch; closed: solid; opening: half-height outline hatch
+      if (k === 2) { g.fillStyle = col; g.fillRect(x0, by, x1 - x0 + .6, bandH); }
+      else if (k === 1) { g.fillStyle = col; g.globalAlpha = .6; g.fillRect(x0, by + bandH / 2, x1 - x0 + .6, bandH / 2); g.globalAlpha = 1; }
+      else if (k === 3) { g.fillStyle = col; g.globalAlpha = .6; g.fillRect(x0, by, x1 - x0 + .6, bandH / 2); g.globalAlpha = 1; }
+      else { g.fillStyle = col; g.globalAlpha = .28; g.fillRect(x0, by + bandH - 2, x1 - x0 + .6, 2); g.globalAlpha = 1; } }
+    const op = tl.opening || tl.opening_cmd;
+    if (op) { const mx = Math.max(...op, 1e-6), h = rowH - 46, oy = by + bandH + 6; g.strokeStyle = col; g.lineWidth = 1.4; g.beginPath();
+      for (let i = 0; i < n; i++) { const x = W * D.t[i] / T, yy = oy + h - h * Math.max(op[i], 0) / mx; i ? g.lineTo(x, yy) : g.moveTo(x, yy); } g.stroke();
+      g.fillStyle = "#8b8f98"; g.textAlign = "right"; g.fillText(`line: opening, max ${(mx * 1000).toFixed(0)} mm`, W - 6, y + 13); g.textAlign = "left"; }
+    g.strokeStyle = "rgba(243,244,246,.09)"; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y + rowH - .5); g.lineTo(W, y + rowH - .5); g.stroke();
+  });
+  const x = W * D.t[cur] / T; g.strokeStyle = "#f3f4f6"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
+}
+
+function setCur(i, fromScrub) {
+  cur = Math.max(0, Math.min(D.t.length - 1, Math.round(i)));
+  if (!fromScrub) $("scrub").value = cur;
+  const T = D.t[D.t.length - 1];
+  $("time").textContent = `${D.t[cur].toFixed(1)} / ${T.toFixed(1)} s`;
+  $("scrub").setAttribute("aria-valuetext", `${D.t[cur].toFixed(1)} of ${T.toFixed(1)} seconds`);
+  $("now").innerHTML = D.tools.map((tl, ti) => { const p = tl.pos[cur];
+    return `<div class="row"><span class="name" style="color:${COLORS[ti % 4]}">${esc(tl.name)}</span><span>${tl.grip ? shapeSvg(tl.grip[cur], COLORS[ti % 4]) + "gripper " + GRIP[tl.grip[cur]] : ""}${tl.opening ? `, ${(tl.opening[cur] * 1000).toFixed(1)} mm` : ""}</span><span>${tl.state ? ["idle", "following the hand", "lost: cannot follow"][tl.state[cur]] : ""}</span><span class="mono">x ${p[0].toFixed(3)}  y ${p[1].toFixed(3)}  z ${p[2].toFixed(3)} m</span></div>`; }).join("");
+  drawView(); drawTimeline();
+}
+let playT = 0;
+function tick(ts) {
+  if (!playing) return;
+  playT += Math.min(.1, (ts - lastTs) / 1000) * Number($("speed").value); lastTs = ts;
+  let i = cur; while (i < D.t.length - 1 && D.t[i + 1] <= playT) i++;
+  if (i !== cur) setCur(i);
+  if (i >= D.t.length - 1) { play(false); return; }
+  requestAnimationFrame(tick);
+}
+function play(on) { playing = on; $("play").textContent = on ? "Pause" : "Play"; $("play").setAttribute("aria-pressed", on);
+  if (on) { if (cur >= D.t.length - 1) setCur(0); playT = D.t[cur]; lastTs = performance.now(); requestAnimationFrame(tick); } }
+
+function init(d) {
+  D = d;
+  for (const tl of D.tools) { tl.vp = tl.pos.map(toView); tl.vc = tl.ctrl ? tl.ctrl.map((c) => c && toView(c)) : null; }
+  fit();
+  const e = D.entry || {}, s = D.summary, st = e.started || D.meta.started || "";
+  const when = st.length >= 15 ? `${st.slice(0, 4)}-${st.slice(4, 6)}-${st.slice(6, 8)} ${st.slice(9, 11)}:${st.slice(11, 13)}:${st.slice(13, 15)}` : st;
+  document.title = `Take ${e.take ?? D.meta.take ?? ""} trajectory`;
+  $("title").textContent = `Take ${e.take ?? D.meta.take ?? ""}`;
+  $("desc").textContent = `Session ${e.session ?? D.meta.session ?? "?"}, recorded ${when}. ${s.steps} steps over ${s.seconds.toFixed(1)} s, ${D.tools.length} tool${D.tools.length > 1 ? "s" : ""}.`;
+  const valid = !("valid" in e) ? "not checked" : (e.valid ? "valid" : "flagged: " + (e.flags || []).join(", "));
+  const known = new Set(["file", "session", "take", "started", "steps", "seconds", "sim_seconds", "wall_seconds", "rate_hz", "tools", "valid", "flags", "physics"]);
+  const more = Object.entries(e).filter(([k, v]) => !known.has(k) && (typeof v !== "object" || v === null)).map(([k, v]) => [k.replace(/_/g, " "), esc(String(v))]);
+  $("props").innerHTML = [["Session", esc(e.session ?? D.meta.session ?? "–")], ["Take", esc(e.take ?? D.meta.take ?? "–")], ["Recorded", esc(when)],
+    ["Recording", "complete, saved"], ["Duration", `${s.seconds.toFixed(2)} s of recorded time`], ["Wall time", s.wall_seconds != null ? `${s.wall_seconds.toFixed(1)} s` + (s.seconds > 0 ? ` (${(s.seconds / s.wall_seconds).toFixed(2)}x real time)` : "") : "–"],
+    ["Steps", esc(s.steps)], ["Rate", `${s.rate_hz.toFixed(1)} steps per second`], ["Tools", esc(D.tools.map((t) => t.name).join(", "))],
+    ["Validity", esc(valid)], ["Size", D.size_bytes < 1e6 ? `${(D.size_bytes / 1e3).toFixed(0)} kB` : `${(D.size_bytes / 1e6).toFixed(1)} MB`], ["File", `<span class="mono">${esc(D.file)}</span>`],
+    ["Other data", D.extra_keys.length ? `${D.extra_keys.length} application arrays per step` : "none"]].concat(more)
+    .concat(D.thinned_by > 1 ? [["Shown", `every ${D.thinned_by}th step`]] : []).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("");
+  const pc = (v) => v == null ? "–" : (100 * v).toFixed(0) + " %";
+  $("tools").tBodies[0].innerHTML = D.tools.map((tl, ti) => `<tr><th scope="row"><svg width="26" height="10" aria-hidden="true" style="margin-right:8px"><line x1="0" y1="5" x2="26" y2="5" stroke="${COLORS[ti % 4]}" stroke-width="2.4" stroke-dasharray="${DASH[ti % 4].join(" ")}"/></svg>${esc(tl.name)}</th><td class="n">${(tl.path_m * 100).toFixed(1)} cm</td><td class="n">${tl.closes ?? "–"}</td><td class="n">${tl.opens ?? "–"}</td><td class="n">${pc(tl.closed_share)}</td><td class="n">${pc(tl.following_share)}</td><td class="n">${tl.lost_events ?? "–"}</td></tr>`).join("");
+  $("legend").innerHTML = D.tools.map((tl, ti) => `<li><svg width="30" height="10" aria-hidden="true"><line x1="0" y1="5" x2="30" y2="5" stroke="${COLORS[ti % 4]}" stroke-width="2.4" stroke-dasharray="${DASH[ti % 4].join(" ")}"/></svg>${esc(tl.name)} path</li>`).join("")
+    + GRIP.map((n, k) => `<li>${shapeSvg(k, "#f3f4f6")}gripper ${n}</li>`).join("") + `<li>${shapeSvg(4, "#f0713a")}could not follow the hand</li><li><svg width="30" height="10" aria-hidden="true"><line x1="0" y1="5" x2="30" y2="5" stroke="#f3f4f6" stroke-width="4"/></svg>thick line: gripper closed</li>`;
+  $("view").setAttribute("aria-label", `3D view of the tool paths of take ${e.take ?? ""}: ${D.tools.map((t) => `${t.name} travelled ${(t.path_m * 100).toFixed(0)} centimetres`).join(", ")}. The current time and gripper states are in the text below the view.`);
+  $("scrub").max = D.t.length - 1;
+  $("main").hidden = false;
+  const at = Number(new URLSearchParams(location.search).get("at") || 0);      // ?at=0..1: where to start
+  setCur(at * (D.t.length - 1));
+}
+
+// ---- interaction
+const view = $("view"); let drag = null;
+view.addEventListener("pointerdown", (e) => { drag = {x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2}; view.setPointerCapture(e.pointerId); });
+view.addEventListener("pointermove", (e) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.pan) pan(-dx, dy); else { cam.yaw += dx * .008; cam.pitch = Math.max(-1.5, Math.min(1.5, cam.pitch + dy * .008)); } drawView(); });
+view.addEventListener("pointerup", () => { drag = null; });
+view.addEventListener("contextmenu", (e) => e.preventDefault());
+view.addEventListener("wheel", (e) => { e.preventDefault(); cam.dist *= Math.exp(e.deltaY * .0012); drawView(); }, {passive: false});
+function pan(dx, dy) { const k = cam.dist / 700, cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw); cam.t[0] += k * dx * cy; cam.t[2] += k * dx * sy; cam.t[1] += k * dy; }
+view.addEventListener("keydown", (e) => { const s = e.shiftKey; let used = true;
+  if (e.key === "ArrowLeft") s ? pan(-30, 0) : cam.yaw -= .1; else if (e.key === "ArrowRight") s ? pan(30, 0) : cam.yaw += .1;
+  else if (e.key === "ArrowUp") s ? pan(0, 30) : cam.pitch = Math.min(1.5, cam.pitch + .08); else if (e.key === "ArrowDown") s ? pan(0, -30) : cam.pitch = Math.max(-1.5, cam.pitch - .08);
+  else if (e.key === "+" || e.key === "=") cam.dist *= .88; else if (e.key === "-") cam.dist /= .88;
+  else if (e.key === " ") play(!playing); else if (e.key === "Home") setCur(0); else if (e.key === "End") setCur(D.t.length - 1); else used = false;
+  if (used) { e.preventDefault(); drawView(); } });
+$("play").addEventListener("click", () => play(!playing));
+$("scrub").addEventListener("input", (e) => { play(false); setCur(Number(e.target.value), true); });
+$("show-ctrl").addEventListener("change", drawView);
+$("reset").addEventListener("click", () => { cam = JSON.parse(JSON.stringify(cam0)); drawView(); });
+$("timeline").addEventListener("click", (e) => { const r = e.target.getBoundingClientRect(), t = (e.clientX - r.left) / r.width * D.t[D.t.length - 1];
+  let i = 0; while (i < D.t.length - 1 && D.t[i] < t) i++; play(false); setCur(i); });
+window.addEventListener("resize", () => { if (D) { drawView(); drawTimeline(); } });
+
+const file = new URLSearchParams(location.search).get("file") || "";
+fetch("/api/take?file=" + encodeURIComponent(file)).then((r) => r.json()).then((d) => {
+  if (d.error) { $("error").hidden = false; $("error").textContent = "Cannot show this take: " + d.error; $("desc").textContent = file; return; }
+  init(d); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawView(); drawTimeline(); });
+}).catch((e) => { $("error").hidden = false; $("error").textContent = "Cannot load the take: " + e; });
+</script>
+</body>
+</html>
