@@ -2,9 +2,10 @@
 
 ## Which headsets work?
 
-It is built and measured on a **Meta Quest 2**. The app is plain OpenXR with Touch controller bindings, and its
-manifest lists Quest 2, Quest Pro, Quest 3 and Quest 3S as supported devices; only the Quest 2 has been measured
-([Measurements](measurements.md)).
+Meta Quest headsets. The app uses standard OpenXR with Touch controller bindings, and its manifest lists Quest 2,
+Quest Pro, Quest 3 and Quest 3S as supported devices. It is tested and measured on a **Quest 2**
+([Measurements](measurements.md)); Quest 2-specific details (72 Hz default refresh rate, grey-scale passthrough,
+controllers that ignore the vibration frequency) are marked as such in these pages.
 
 ## Do I need Unity, Unreal, Android Studio or Gradle?
 

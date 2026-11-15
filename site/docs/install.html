@@ -30,7 +30,7 @@
     <ol>
       <li><a href="index.html">Overview</a></li>
       <li><a href="install.html" aria-current="page">Install</a></li>
-      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quest-setup.html">Headset setup</a></li>
       <li><a href="quick-start.html">Quick start</a></li>
       <li><a href="library.html">Use it with your own simulator</a></li>
       <li><a href="recording.html">Recording takes</a></li>
@@ -46,7 +46,7 @@
 <h1 id="install">Install</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#requirements">Requirements</a></li><li><a href="#1-the-python-library">1. The Python library</a></li><li><a href="#2-the-headset-app">2. The headset app</a></li><li><a href="#3-the-desktop-client-optional">3. The desktop client (optional)</a></li><li><a href="#4-run-the-tests-optional">4. Run the tests (optional)</a></li><li><a href="#uninstall">Uninstall</a></li></ol></nav>
 <p>There are up to three things to install: the Python library (always), the headset app (once per headset), and the desktop client (optional, for trying a server without a headset).</p>
 <h2 id="requirements">Requirements <a class="anchor" href="#requirements" aria-label="Link to this section">#</a></h2>
-<div class="table"><table><thead><tr><th scope="col">What</th><th scope="col">Needed for</th></tr></thead><tbody><tr><td>Python 3.10 or newer, pip</td><td>the library, the demo, the probe</td></tr><tr><td>numpy</td><td>the library (installed automatically)</td></tr><tr><td>git</td><td>cloning the repository to build the headset app or the desktop client</td></tr><tr><td>Linux on x86-64</td><td>the build scripts (<code>android/setup_toolchain.sh</code> downloads the Linux Android tools)</td></tr><tr><td>cmake 3.18 or newer, make, curl, unzip, zip</td><td>building the APK</td></tr><tr><td>a Java runtime, version 17 or newer</td><td><code>sdkmanager</code>, <code>apksigner</code> and <code>keytool</code> while building the APK</td></tr><tr><td>about 2.5 GB of disk</td><td>the Android SDK tools, the NDK and the OpenXR loader</td></tr><tr><td>a USB-C data cable</td><td>installing the app on the headset</td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th scope="col">What</th><th scope="col">Needed for</th></tr></thead><tbody><tr><td>Python 3.10 or newer, pip</td><td>the library, the demo, the probe</td></tr><tr><td>numpy</td><td>the library (installed automatically)</td></tr><tr><td>git</td><td>cloning the repository to build the headset app or the desktop client</td></tr><tr><td>Linux on x86-64</td><td>the build scripts (<code>android/setup_toolchain.sh</code> downloads the Linux Android tools)</td></tr><tr><td>cmake 3.18 or newer, make, curl, unzip, zip</td><td>building the APK</td></tr><tr><td>a Java runtime, version 17 or newer</td><td><code>sdkmanager</code>, <code>apksigner</code> and <code>keytool</code> while building the APK</td></tr><tr><td>about 2.5 GB of disk</td><td>the Android SDK tools, the NDK and the OpenXR loader</td></tr><tr><td>a Meta Quest headset (tested on a Quest 2) in developer mode</td><td>running the app</td></tr><tr><td>a USB-C data cable</td><td>installing the app on the headset</td></tr></tbody></table></div>
 <p>On Debian or Ubuntu, for example:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">sudo apt install git python3-pip cmake make curl unzip zip openjdk-17-jdk-headless</code></pre></div>
 <h2 id="1-the-python-library">1. The Python library <a class="anchor" href="#1-the-python-library" aria-label="Link to this section">#</a></h2>
@@ -67,7 +67,7 @@ quest-teleop-demo --help</code></pre></div>
 cd quest-teleop
 android/setup_toolchain.sh</code></pre></div>
 <p>It installs into <code>~/android-sdk</code> (set <code>ANDROID_HOME</code> to choose another folder), about 2.4 GB:</p>
-<div class="table"><table><thead><tr><th scope="col">Component</th><th scope="col">Version</th></tr></thead><tbody><tr><td>Android command-line tools</td><td>11076708</td></tr><tr><td>platform-tools (<code>adb</code>)</td><td>latest</td></tr><tr><td>build-tools (<code>aapt2</code>, <code>zipalign</code>, <code>apksigner</code>)</td><td>34.0.0</td></tr><tr><td>platform (<code>android.jar</code>)</td><td>android-32 (Quest 2 runs Android 12L)</td></tr><tr><td>NDK</td><td>27.2.12479018 (r27c)</td></tr><tr><td>Khronos OpenXR loader for Android</td><td>1.1.65</td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th scope="col">Component</th><th scope="col">Version</th></tr></thead><tbody><tr><td>Android command-line tools</td><td>11076708</td></tr><tr><td>platform-tools (<code>adb</code>)</td><td>latest</td></tr><tr><td>build-tools (<code>aapt2</code>, <code>zipalign</code>, <code>apksigner</code>)</td><td>34.0.0</td></tr><tr><td>platform (<code>android.jar</code>)</td><td>android-32 (the APK targets API 32; its minimum is API 29)</td></tr><tr><td>NDK</td><td>27.2.12479018 (r27c)</td></tr><tr><td>Khronos OpenXR loader for Android</td><td>1.1.65</td></tr></tbody></table></div>
 <p>It downloads only from <code>dl.google.com</code> and <code>github.com/KhronosGroup</code>. <strong>Running it accepts the Android SDK licence agreements</strong> (<code>sdkmanager --licenses</code>); an agent should tell the user this before running it. Running it again is safe: finished parts are skipped.</p>
 <p>At the end it prints where <code>adb</code> is: <code>~/android-sdk/platform-tools/adb</code>. The other pages write plain <code>adb</code>; either put that folder on your <code>PATH</code> or use the full path:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">export PATH="$HOME/android-sdk/platform-tools:$PATH"</code></pre></div>
@@ -75,13 +75,13 @@ android/setup_toolchain.sh</code></pre></div>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">android/build_apk.sh            # builds build/quest-teleop.apk (about 1 MB)</code></pre></div>
 <p>The APK is signed with the standard Android debug key in <code>~/.android/debug.keystore</code> (created with <code>keytool</code> if it is missing). That is all a sideloaded developer build needs.</p>
 <h3 id="23-install-it-on-the-headset">2.3 Install it on the headset <a class="anchor" href="#23-install-it-on-the-headset" aria-label="Link to this section">#</a></h3>
-<p>The headset must be in developer mode, connected by USB, and listed by <code>adb devices</code> as <code>device</code>: see <a href="quest-setup.html">Quest 2 setup</a> first. Then:</p>
+<p>The headset must be in developer mode, connected by USB, and listed by <code>adb devices</code> as <code>device</code>: see <a href="quest-setup.html">Headset setup</a> first. Then:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">android/build_apk.sh install    # builds, runs `adb install -r build/quest-teleop.apk`, and starts the app</code></pre></div>
 <p>To start the app with a fixed server address instead of finding the server by itself:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">SERVER=192.168.1.20 android/build_apk.sh install</code></pre></div>
 <p>An APK that is already built installs with plain adb:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb install -r build/quest-teleop.apk</code></pre></div>
-<p>In the headset the app is under <strong>Library</strong>, filter <strong>Unknown sources</strong>, as <strong>Quest Teleop</strong>. Its package name is <code>com.entangledquantum.questteleop</code>.</p>
+<p>In the headset the app is under <strong>Library</strong>, filter <strong>Unknown sources</strong>; its label there is <strong>Quest Teleop</strong>. Its package name is <code>com.entangledquantum.questteleop</code>.</p>
 <h2 id="3-the-desktop-client-optional">3. The desktop client (optional) <a class="anchor" href="#3-the-desktop-client-optional" aria-label="Link to this section">#</a></h2>
 <p>The same C++ core as the headset app, in an X11 window. Needs a C++17 compiler and the X11, EGL, OpenGL ES and zlib development files:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">sudo apt install g++ cmake make libx11-dev libegl-dev libgles-dev zlib1g-dev     # Debian / Ubuntu
@@ -98,11 +98,11 @@ python -m pytest -q</code></pre></div>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">pip uninstall quest-teleop
 adb uninstall com.entangledquantum.questteleop</code></pre></div>
 <p>The toolchain is the folder <code>~/android-sdk</code> (or your <code>ANDROID_HOME</code>); delete it by hand only if nothing else uses it.</p>
-<p>Next: <a href="quest-setup.html">Quest 2 setup</a>.</p>
+<p>Next: <a href="quest-setup.html">Headset setup</a>.</p>
     </article>
     <footer class="page-foot">
       <p class="md-link">This page as Markdown: <a href="install.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/install.md</code></a></p>
-      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="index.html"><span class="label">Previous</span>Overview</a><a class="pn next" href="quest-setup.html"><span class="label">Next</span>Quest 2 setup</a></nav>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="index.html"><span class="label">Previous</span>Overview</a><a class="pn next" href="quest-setup.html"><span class="label">Next</span>Headset setup</a></nav>
     </footer>
   </main>
 </div>

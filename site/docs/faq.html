@@ -30,7 +30,7 @@
     <ol>
       <li><a href="index.html">Overview</a></li>
       <li><a href="install.html">Install</a></li>
-      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quest-setup.html">Headset setup</a></li>
       <li><a href="quick-start.html">Quick start</a></li>
       <li><a href="library.html">Use it with your own simulator</a></li>
       <li><a href="recording.html">Recording takes</a></li>
@@ -45,7 +45,7 @@
     <article class="prose">
 <h1 id="faq">FAQ</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#which-headsets-work">Which headsets work?</a></li><li><a href="#do-i-need-unity-unreal-android-studio-or-gradle">Do I need Unity, Unreal, Android Studio or Gradle?</a></li><li><a href="#does-it-need-quest-link-air-link-or-a-pc-vr-runtime">Does it need Quest Link, Air Link or a PC VR runtime?</a></li><li><a href="#is-the-python-library-tied-to-a-simulator-or-robot">Is the Python library tied to a simulator or robot?</a></li><li><a href="#which-operating-systems-are-supported">Which operating systems are supported?</a></li><li><a href="#how-do-i-install-the-python-library">How do I install the Python library?</a></li><li><a href="#wi-fi-or-usb">Wi-Fi or USB?</a></li><li><a href="#how-much-bandwidth-does-it-use">How much bandwidth does it use?</a></li><li><a href="#can-several-headsets-connect-at-once">Can several headsets connect at once?</a></li><li><a href="#can-i-write-my-own-client-or-server">Can I write my own client or server?</a></li><li><a href="#does-it-support-hand-tracking">Does it support hand tracking?</a></li><li><a href="#what-is-recorded-and-where">What is recorded, and where?</a></li><li><a href="#is-anything-sent-to-the-internet">Is anything sent to the internet?</a></li><li><a href="#licence">Licence?</a></li></ol></nav>
 <h2 id="which-headsets-work">Which headsets work? <a class="anchor" href="#which-headsets-work" aria-label="Link to this section">#</a></h2>
-<p>It is built and measured on a <strong>Meta Quest 2</strong>. The app is plain OpenXR with Touch controller bindings, and its manifest lists Quest 2, Quest Pro, Quest 3 and Quest 3S as supported devices; only the Quest 2 has been measured (<a href="measurements.html">Measurements</a>).</p>
+<p>Meta Quest headsets. The app uses standard OpenXR with Touch controller bindings, and its manifest lists Quest 2, Quest Pro, Quest 3 and Quest 3S as supported devices. It is tested and measured on a <strong>Quest 2</strong> (<a href="measurements.html">Measurements</a>); Quest 2-specific details (72 Hz default refresh rate, grey-scale passthrough, controllers that ignore the vibration frequency) are marked as such in these pages.</p>
 <h2 id="do-i-need-unity-unreal-android-studio-or-gradle">Do I need Unity, Unreal, Android Studio or Gradle? <a class="anchor" href="#do-i-need-unity-unreal-android-studio-or-gradle" aria-label="Link to this section">#</a></h2>
 <p>No. The headset app is about 1 MB of C++ (OpenXR, EGL, OpenGL ES 3, one <code>NativeActivity</code>, no Java), built by two shell scripts with the NDK, CMake and the Android build tools.</p>
 <h2 id="does-it-need-quest-link-air-link-or-a-pc-vr-runtime">Does it need Quest Link, Air Link or a PC VR runtime? <a class="anchor" href="#does-it-need-quest-link-air-link-or-a-pc-vr-runtime" aria-label="Link to this section">#</a></h2>

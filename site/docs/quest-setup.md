@@ -1,6 +1,8 @@
-# Quest 2 setup
+# Headset setup
 
-What the headset needs before the app can be installed and reach your computer. Steps marked **(person)** need
+What the headset needs before the app can be installed and reach your computer. These steps are written for and
+tested on a **Quest 2**. Other Meta Quest headsets use the same developer mode, USB debugging and network setup;
+menu names can differ between headsets and system versions. Steps marked **(person)** need
 someone with the headset or the phone; steps marked **(root)** need `sudo` on the computer.
 
 ## 1. Developer mode (once) (person)
@@ -34,7 +36,7 @@ adb devices          # adb is ~/android-sdk/platform-tools/adb after android/set
 
 ### udev rule on Linux (root)
 
-Gives your user access to the headset's USB device (vendor id `2833`):
+Gives your user access to the headset's USB device (Meta's USB vendor id `2833`):
 
 ```bash
 echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="2833", MODE="0666", GROUP="plugdev"' | sudo tee /etc/udev/rules.d/51-oculus.rules
@@ -50,7 +52,7 @@ android/build_apk.sh install
 ```
 
 See [Install](install.md#2-the-headset-app). The app is in the headset under **Library**, filter **Unknown
-sources**, as **Quest Teleop**.
+sources**, labelled **Quest Teleop**.
 
 ## 5. Network: Wi-Fi
 
@@ -98,7 +100,7 @@ same ([Measurements](measurements.md)).
 
 ## 7. Start and stop the app
 
-From the headset: **Library**, **Unknown sources**, **Quest Teleop**. From the computer:
+From the headset: **Library**, **Unknown sources**, then the app labelled **Quest Teleop**. From the computer:
 
 ```bash
 adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity
@@ -111,7 +113,7 @@ Launch options, added to `am start` as `--es NAME VALUE`:
 |---|---|---|
 | `server` | `--es server 192.168.1.20` or `--es server 192.168.1.20:47800` | connect to this address instead of discovering the server |
 | `hz` | `--es hz 90` | display refresh rate (default: the system's, 72 Hz on a Quest 2) |
-| `passthrough` | `--es passthrough 0` | start without passthrough (a floor grid is drawn instead) |
+| `passthrough` | `--es passthrough 0` | start without passthrough (a floor grid is drawn instead). On a Quest 2 passthrough is grey-scale |
 
 The app's log:
 

@@ -1,11 +1,11 @@
 # quest-teleop
 
-Teleoperate anything from a **Meta Quest 2** (or a later Quest), without a game engine: a small native headset
+Teleoperate anything from a **Meta Quest** headset, without a game engine (standard OpenXR; tested on a Quest 2): a small native headset
 app, a Python library for the computer side, a recorder for the trajectories, and a local web page to watch it all.
 
 **Website and documentation: <https://entangledquantum.github.io/quest-teleop/>.** For an AI coding agent:
 "Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install quest-teleop, set up my
-Quest 2, and show me how to use it."
+Meta Quest headset, and show me how to use it."
 
 * **Headset app** (`client/`): native OpenXR + OpenGL ES 3 in C++ (one `NativeActivity`, no Java, no Gradle). It
   knows nothing about your task. It connects to a server on the local network, receives a 3D scene (meshes and
@@ -176,7 +176,7 @@ Rendering: one shadow-mapped key light, hemisphere ambient, a fill light, Fresne
 highlight for nodes the server flags. On a Quest 2 passthrough is grey-scale; without passthrough a floor grid is
 drawn.
 
-## Quest 2 setup
+## Headset setup (written for and tested on a Quest 2)
 
 1. **Developer mode** (once): in the Meta Horizon phone app, logged in with the headset's account, create or join a
    developer organisation (<https://developers.meta.com/horizon/manage/organizations/create/>) and verify the
@@ -196,7 +196,7 @@ drawn.
    and tunnels everything through TCP.
 
 Launch options: `adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity --es server
-192.168.1.20` (explicit address), `--es hz 90` (display rate; default is the system's 72 Hz), `--es passthrough 0`.
+192.168.1.20` (explicit address), `--es hz 90` (display rate; default is the system's, 72 Hz on a Quest 2), `--es passthrough 0`.
 
 ## Protocol
 

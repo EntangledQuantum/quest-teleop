@@ -14,6 +14,7 @@ desktop client (optional, for trying a server without a headset).
 | cmake 3.18 or newer, make, curl, unzip, zip | building the APK |
 | a Java runtime, version 17 or newer | `sdkmanager`, `apksigner` and `keytool` while building the APK |
 | about 2.5 GB of disk | the Android SDK tools, the NDK and the OpenXR loader |
+| a Meta Quest headset (tested on a Quest 2) in developer mode | running the app |
 | a USB-C data cable | installing the app on the headset |
 
 On Debian or Ubuntu, for example:
@@ -71,7 +72,7 @@ It installs into `~/android-sdk` (set `ANDROID_HOME` to choose another folder), 
 | Android command-line tools | 11076708 |
 | platform-tools (`adb`) | latest |
 | build-tools (`aapt2`, `zipalign`, `apksigner`) | 34.0.0 |
-| platform (`android.jar`) | android-32 (Quest 2 runs Android 12L) |
+| platform (`android.jar`) | android-32 (the APK targets API 32; its minimum is API 29) |
 | NDK | 27.2.12479018 (r27c) |
 | Khronos OpenXR loader for Android | 1.1.65 |
 
@@ -98,7 +99,7 @@ is missing). That is all a sideloaded developer build needs.
 ### 2.3 Install it on the headset
 
 The headset must be in developer mode, connected by USB, and listed by `adb devices` as `device`: see
-[Quest 2 setup](quest-setup.md) first. Then:
+[Headset setup](quest-setup.md) first. Then:
 
 ```bash
 android/build_apk.sh install    # builds, runs `adb install -r build/quest-teleop.apk`, and starts the app
@@ -116,7 +117,7 @@ An APK that is already built installs with plain adb:
 adb install -r build/quest-teleop.apk
 ```
 
-In the headset the app is under **Library**, filter **Unknown sources**, as **Quest Teleop**. Its package name is
+In the headset the app is under **Library**, filter **Unknown sources**; its label there is **Quest Teleop**. Its package name is
 `com.entangledquantum.questteleop`.
 
 ## 3. The desktop client (optional)
@@ -156,4 +157,4 @@ adb uninstall com.entangledquantum.questteleop
 The toolchain is the folder `~/android-sdk` (or your `ANDROID_HOME`); delete it by hand only if nothing else uses
 it.
 
-Next: [Quest 2 setup](quest-setup.md).
+Next: [Headset setup](quest-setup.md).

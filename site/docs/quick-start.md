@@ -2,7 +2,7 @@
 
 Run the bundled demo, connect a headset (or the desktop client), move two grippers, record a take, and look at it
 on the status page. Needs the Python library ([Install](install.md#1-the-python-library)); the headset part needs
-the app installed ([Quest 2 setup](quest-setup.md)).
+the app installed ([Headset setup](quest-setup.md)).
 
 ## 1. Start the demo server
 
@@ -34,8 +34,8 @@ with Ctrl-C.
 
 ## 2. Connect a client
 
-**Headset over Wi-Fi.** Start **Quest Teleop** in the headset (Library, filter "Unknown sources"). It finds the
-server by itself if the firewall ports are open ([Quest 2 setup](quest-setup.md#5-network-wi-fi)).
+**Headset over Wi-Fi.** Start the app in the headset (Library, filter "Unknown sources", labelled **Quest Teleop**). It finds the
+server by itself if the firewall ports are open ([Headset setup](quest-setup.md#5-network-wi-fi)).
 
 **Headset over USB.**
 

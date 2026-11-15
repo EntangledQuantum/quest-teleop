@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quest 2 setup · quest-teleop docs</title>
-<meta name="description" content="Developer mode, the USB detected / allow USB debugging prompts, Link auto connect off, the udev rule on Linux, firewall ports TCP 47800 and UDP 47800-47801, USB link with adb reverse, launch options.">
+<title>Headset setup · quest-teleop docs</title>
+<meta name="description" content="Written for and tested on a Quest 2: developer mode, the USB detected / allow USB debugging prompts, Link auto connect off, the udev rule on Linux, firewall ports TCP 47800 and UDP 47800-47801, USB link with adb reverse, launch options.">
 <link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/quest-setup.html">
 <link rel="alternate" type="text/markdown" href="quest-setup.md" title="This page as Markdown">
 <link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
@@ -30,7 +30,7 @@
     <ol>
       <li><a href="index.html">Overview</a></li>
       <li><a href="install.html">Install</a></li>
-      <li><a href="quest-setup.html" aria-current="page">Quest 2 setup</a></li>
+      <li><a href="quest-setup.html" aria-current="page">Headset setup</a></li>
       <li><a href="quick-start.html">Quick start</a></li>
       <li><a href="library.html">Use it with your own simulator</a></li>
       <li><a href="recording.html">Recording takes</a></li>
@@ -43,8 +43,8 @@
   </nav>
   <main id="main">
     <article class="prose">
-<h1 id="quest-2-setup">Quest 2 setup</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#1-developer-mode-once-person">1. Developer mode (once) (person)</a></li><li><a href="#2-connect-by-usb-person">2. Connect by USB (person)</a></li><li><a href="#3-check-that-adb-sees-the-headset">3. Check that adb sees the headset</a></li><li><a href="#4-install-the-app">4. Install the app</a></li><li><a href="#5-network-wi-fi">5. Network: Wi-Fi</a></li><li><a href="#6-network-usb-cable-instead-of-wi-fi">6. Network: USB cable instead of Wi-Fi</a></li><li><a href="#7-start-and-stop-the-app">7. Start and stop the app</a></li></ol></nav>
-<p>What the headset needs before the app can be installed and reach your computer. Steps marked <strong>(person)</strong> need someone with the headset or the phone; steps marked <strong>(root)</strong> need <code>sudo</code> on the computer.</p>
+<h1 id="headset-setup">Headset setup</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#1-developer-mode-once-person">1. Developer mode (once) (person)</a></li><li><a href="#2-connect-by-usb-person">2. Connect by USB (person)</a></li><li><a href="#3-check-that-adb-sees-the-headset">3. Check that adb sees the headset</a></li><li><a href="#4-install-the-app">4. Install the app</a></li><li><a href="#5-network-wi-fi">5. Network: Wi-Fi</a></li><li><a href="#6-network-usb-cable-instead-of-wi-fi">6. Network: USB cable instead of Wi-Fi</a></li><li><a href="#7-start-and-stop-the-app">7. Start and stop the app</a></li></ol></nav>
+<p>What the headset needs before the app can be installed and reach your computer. These steps are written for and tested on a <strong>Quest 2</strong>. Other Meta Quest headsets use the same developer mode, USB debugging and network setup; menu names can differ between headsets and system versions. Steps marked <strong>(person)</strong> need someone with the headset or the phone; steps marked <strong>(root)</strong> need <code>sudo</code> on the computer.</p>
 <h2 id="1-developer-mode-once-person">1. Developer mode (once) (person) <a class="anchor" href="#1-developer-mode-once-person" aria-label="Link to this section">#</a></h2>
 <ol><li>In the <strong>Meta Horizon</strong> phone app, logged in with the headset's account, create or join a developer organisation at <a href="https://developers.meta.com/horizon/manage/organizations/create/">https://developers.meta.com/horizon/manage/organizations/create/</a> and verify the account.</li><li>In the phone app: <strong>Menu</strong>, <strong>Devices</strong>, the headset, <strong>Headset settings</strong>, <strong>Developer mode</strong>: on.</li><li>Reboot the headset.</li></ol>
 <h2 id="2-connect-by-usb-person">2. Connect by USB (person) <a class="anchor" href="#2-connect-by-usb-person" aria-label="Link to this section">#</a></h2>
@@ -53,13 +53,13 @@
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb devices          # adb is ~/android-sdk/platform-tools/adb after android/setup_toolchain.sh</code></pre></div>
 <div class="table"><table><thead><tr><th scope="col"><code>adb devices</code> shows</th><th scope="col">Meaning and fix</th></tr></thead><tbody><tr><td><code>1WMHH... device</code></td><td>ready</td></tr><tr><td>nothing</td><td>the cable is charge-only, or "USB detected" was not allowed: replug and tap the notification in the headset</td></tr><tr><td><code>unauthorized</code></td><td>accept "Allow USB debugging" in the headset (put it on)</td></tr><tr><td><code>no permissions</code> (Linux)</td><td>add the udev rule below, then replug</td></tr></tbody></table></div>
 <h3 id="udev-rule-on-linux-root">udev rule on Linux (root) <a class="anchor" href="#udev-rule-on-linux-root" aria-label="Link to this section">#</a></h3>
-<p>Gives your user access to the headset's USB device (vendor id <code>2833</code>):</p>
+<p>Gives your user access to the headset's USB device (Meta's USB vendor id <code>2833</code>):</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="2833", MODE="0666", GROUP="plugdev"' | sudo tee /etc/udev/rules.d/51-oculus.rules
 sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger</code></pre></div>
 <p>Then unplug and replug the cable and run <code>adb devices</code> again.</p>
 <h2 id="4-install-the-app">4. Install the app <a class="anchor" href="#4-install-the-app" aria-label="Link to this section">#</a></h2>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">android/build_apk.sh install</code></pre></div>
-<p>See <a href="install.html#2-the-headset-app">Install</a>. The app is in the headset under <strong>Library</strong>, filter <strong>Unknown sources</strong>, as <strong>Quest Teleop</strong>.</p>
+<p>See <a href="install.html#2-the-headset-app">Install</a>. The app is in the headset under <strong>Library</strong>, filter <strong>Unknown sources</strong>, labelled <strong>Quest Teleop</strong>.</p>
 <h2 id="5-network-wi-fi">5. Network: Wi-Fi <a class="anchor" href="#5-network-wi-fi" aria-label="Link to this section">#</a></h2>
 <p>The app finds the server by itself: it broadcasts a discovery request and listens for the server's beacons.</p>
 <ul><li>Put the headset and the computer on the <strong>same router</strong>. Use 5 GHz for the headset if you can. A guest network or "client isolation" / "AP isolation" blocks the headset from reaching the computer.</li><li>Open these ports in the computer's firewall <strong>(root)</strong>:</li></ul>
@@ -76,11 +76,11 @@ sudo firewall-cmd --permanent --add-port=47800/tcp --add-port=47800-47801/udp &a
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb reverse tcp:47800 tcp:47800</code></pre></div>
 <p>The app then reaches the server on its own loopback address (it tries <code>127.0.0.1</code> first) and tunnels everything, including the datagrams, through that one TCP connection. No firewall change is needed. Run the command again after the cable is replugged or the adb server restarts. On a Quest 2 the median latency over USB and over Wi-Fi is the same (<a href="measurements.html">Measurements</a>).</p>
 <h2 id="7-start-and-stop-the-app">7. Start and stop the app <a class="anchor" href="#7-start-and-stop-the-app" aria-label="Link to this section">#</a></h2>
-<p>From the headset: <strong>Library</strong>, <strong>Unknown sources</strong>, <strong>Quest Teleop</strong>. From the computer:</p>
+<p>From the headset: <strong>Library</strong>, <strong>Unknown sources</strong>, then the app labelled <strong>Quest Teleop</strong>. From the computer:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity
 adb shell am force-stop com.entangledquantum.questteleop</code></pre></div>
 <p>Launch options, added to <code>am start</code> as <code>--es NAME VALUE</code>:</p>
-<div class="table"><table><thead><tr><th scope="col">Option</th><th scope="col">Example</th><th scope="col">Effect</th></tr></thead><tbody><tr><td><code>server</code></td><td><code>--es server 192.168.1.20</code> or <code>--es server 192.168.1.20:47800</code></td><td>connect to this address instead of discovering the server</td></tr><tr><td><code>hz</code></td><td><code>--es hz 90</code></td><td>display refresh rate (default: the system's, 72 Hz on a Quest 2)</td></tr><tr><td><code>passthrough</code></td><td><code>--es passthrough 0</code></td><td>start without passthrough (a floor grid is drawn instead)</td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th scope="col">Option</th><th scope="col">Example</th><th scope="col">Effect</th></tr></thead><tbody><tr><td><code>server</code></td><td><code>--es server 192.168.1.20</code> or <code>--es server 192.168.1.20:47800</code></td><td>connect to this address instead of discovering the server</td></tr><tr><td><code>hz</code></td><td><code>--es hz 90</code></td><td>display refresh rate (default: the system's, 72 Hz on a Quest 2)</td></tr><tr><td><code>passthrough</code></td><td><code>--es passthrough 0</code></td><td>start without passthrough (a floor grid is drawn instead). On a Quest 2 passthrough is grey-scale</td></tr></tbody></table></div>
 <p>The app's log:</p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb logcat -s quest-teleop</code></pre></div>
 <p>Next: <a href="quick-start.html">Quick start</a>.</p>

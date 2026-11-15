@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>quest-teleop: VR teleoperation for Meta Quest 2</title>
-<meta name="description" content="Teleoperate any simulator or robot from a Meta Quest 2: a native OpenXR headset app and a pip-installable Python library that streams your 3D scene, receives the controllers, records takes and serves a local status page.">
+<title>quest-teleop: VR teleoperation for Meta Quest headsets</title>
+<meta name="description" content="Teleoperate any simulator or robot from a Meta Quest headset (standard OpenXR, tested on a Quest 2): a native headset app and a pip-installable Python library that streams your 3D scene, receives the controllers, records takes and serves a local status page.">
 <link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/">
 <link rel="help" href="llms.txt" type="text/plain" title="llms.txt: documentation index for AI agents">
 <link rel="alternate" type="text/markdown" href="docs/index.md" title="Documentation index as Markdown">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
 <meta property="og:title" content="quest-teleop">
-<meta property="og:description" content="VR teleoperation for Meta Quest 2 without a game engine: native OpenXR app, Python server library, haptics, recording, status page.">
+<meta property="og:description" content="VR teleoperation for Meta Quest headsets without a game engine: native OpenXR app, Python server library, haptics, recording, status page.">
 <meta property="og:image" content="https://entangledquantum.github.io/quest-teleop/assets/img/headset_menu.png">
 <meta property="og:url" content="https://entangledquantum.github.io/quest-teleop/">
 <link rel="stylesheet" href="assets/site.css">
@@ -22,7 +22,7 @@
     <header class="hero">
       <p class="label marker">Open source &middot; MIT &middot; version 0.2.0</p>
       <h1 class="page-title">quest-teleop</h1>
-      <p class="page-desc">Teleoperate any simulator or robot from a Meta Quest 2: a small native headset app shows your 3D scene in the room and sends both controllers back to a Python library on your computer. No game engine.</p>
+      <p class="page-desc">quest-teleop lets you teleoperate any simulator or robot from a Meta Quest headset: a small native app shows your 3D scene in the room and sends both controllers back to a Python library on your computer. No game engine. Built on standard OpenXR, tested on a Quest 2.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/EntangledQuantum/quest-teleop">View on GitHub <span class="hint" aria-hidden="true">Source</span></a>
         <a class="btn secondary" href="docs/index.html">Read the docs <span class="hint" aria-hidden="true">11 pages</span></a>
@@ -36,10 +36,10 @@
       <div class="block-head">
         <p class="label marker">For your coding agent</p>
         <h2 class="section-title" id="agent-title">Let your agent set it up</h2>
-        <p class="section-desc">Paste this one line into your AI coding agent. It reads the docs index, then installs the library, builds the headset app and walks you through the Quest 2 steps that need your hands.</p>
+        <p class="section-desc">Paste this one line into your AI coding agent. It reads the docs index, then installs the library, builds the headset app and walks you through the headset steps that need your hands.</p>
       </div>
       <div class="oneliner">
-        <code id="oneliner">Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install quest-teleop, set up my Quest 2, and show me how to use it.</code>
+        <code id="oneliner">Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install quest-teleop, set up my Meta Quest headset, and show me how to use it.</code>
         <button class="copy" type="button" id="copy" hidden>Copy</button>
       </div>
       <p class="sr" id="copy-status" role="status" aria-live="polite"></p>
@@ -58,7 +58,7 @@
       <ul class="facts">
         <li><strong>Native headset app</strong><span>OpenXR and OpenGL ES 3 in C++. About 1 MB, built by two scripts: no game engine, no Gradle, no Java.</span></li>
         <li><strong>Python server library</strong><span><code>pip install</code>, numpy only. Streams meshes, deforming meshes and ropes; returns poses and buttons.</span></li>
-        <li><strong>About 14 ms latency</strong><span>Median from controller sample to simulator state on a Quest 2 at 72 Hz, over USB or Wi-Fi.</span></li>
+        <li><strong>About 14 ms latency</strong><span>Median from controller sample to simulator state, measured on a Quest 2 at 72 Hz, over USB or Wi-Fi.</span></li>
         <li><strong>Desktop client and demo</strong><span>Try a server without a headset: the same renderer in a window, driven by mouse and keyboard.</span></li>
       </ul>
     </section>
@@ -99,7 +99,7 @@
         </li>
         <li>
           <figure>
-            <div class="frame"><img src="assets/img/status_page.png" width="1500" height="2150" loading="lazy" alt="The top of the local status page: the title Quest Teleop demo, a state strip reading Server running, Headset connected by Wi-Fi, Session running and REC take 2, then the Connection and Session tables."></div>
+            <div class="frame"><img src="assets/img/status_page.png" width="1500" height="2150" loading="lazy" alt="The top of the local status page: the demo's title, a state strip reading Server running, Headset connected by Wi-Fi, Session running and REC take 2, then the Connection and Session tables."></div>
             <figcaption>
               <h3>Local status page</h3>
               <p>Connection, simulator and network speeds, latency split into its parts, and every recorded take. Standard library only, nothing loaded from the internet.</p>

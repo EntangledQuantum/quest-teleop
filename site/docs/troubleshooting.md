@@ -7,11 +7,11 @@ Problems by symptom. The app's log is `adb logcat -s quest-teleop`; the server p
 
 * **Nothing listed.** Put the headset on: there is a **"USB detected"** notification to tap and allow. Until it is
   accepted the headset is not visible to adb. If there is no notification, try another cable (many USB-C cables only
-  charge) or another port, and check that developer mode is on ([Quest 2 setup](quest-setup.md#1-developer-mode-once-person)).
+  charge) or another port, and check that developer mode is on ([Headset setup](quest-setup.md#1-developer-mode-once-person)).
 * **`unauthorized`.** Accept **"Allow USB debugging"** in the headset, with "Always allow from this computer" ticked.
   If the prompt does not come back: `adb kill-server`, replug, put the headset on.
 * **`no permissions` (Linux).** Add the udev rule for vendor id `2833`
-  ([Quest 2 setup](quest-setup.md#udev-rule-on-linux-root)), then replug.
+  ([Headset setup](quest-setup.md#udev-rule-on-linux-root)), then replug.
 * **The headset starts Quest Link when plugged in.** Turn "Link auto connect" (or "Turn on Link") off.
 * **`adb: command not found`.** It is in `~/android-sdk/platform-tools/`; add that to `PATH`.
 
@@ -27,7 +27,7 @@ Problems by symptom. The app's log is `adb logcat -s quest-teleop`; the server p
 The app shows "Looking for a server on this network". Check, in this order:
 
 1. The server is running and printed `listening on 0.0.0.0:47800`.
-2. The computer's firewall allows **TCP 47800 and UDP 47800-47801** ([Quest 2 setup](quest-setup.md#5-network-wi-fi)).
+2. The computer's firewall allows **TCP 47800 and UDP 47800-47801** ([Headset setup](quest-setup.md#5-network-wi-fi)).
    This is the most common cause.
 3. Headset and computer are on the same network: not a guest network, no client / AP isolation, no VPN on the
    computer that captures the local traffic.

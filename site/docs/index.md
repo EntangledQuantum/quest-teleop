@@ -1,7 +1,8 @@
 # quest-teleop documentation
 
-quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest 2 (or a later Quest) without a game
-engine. It has four parts:
+quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The
+headset app uses standard OpenXR, so it targets Meta Quest headsets in general; it is tested on a Quest 2, and notes
+that only apply to the Quest 2 say so. quest-teleop has four parts:
 
 * **Headset app** (`client/quest`): native OpenXR + OpenGL ES 3 in C++, one `NativeActivity`, no Java, no Gradle.
   It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every
@@ -19,7 +20,7 @@ Read them in this order the first time.
 
 1. [Install](install.md): the Python library with pip; the Android toolchain, building and installing the APK; the
    desktop client.
-2. [Quest 2 setup](quest-setup.md): developer mode, USB debugging, the udev rule on Linux, firewall ports, USB link
+2. [Headset setup](quest-setup.md): developer mode, USB debugging, the udev rule on Linux, firewall ports, USB link
    with `adb reverse`.
 3. [Quick start](quick-start.md): run the demo, connect the headset or the desktop client, the controls.
 4. [Use it with your own simulator](library.md): the server API, streaming a scene, input, haptics, cues, the panel

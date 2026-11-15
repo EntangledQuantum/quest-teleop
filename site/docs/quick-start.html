@@ -30,7 +30,7 @@
     <ol>
       <li><a href="index.html">Overview</a></li>
       <li><a href="install.html">Install</a></li>
-      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quest-setup.html">Headset setup</a></li>
       <li><a href="quick-start.html" aria-current="page">Quick start</a></li>
       <li><a href="library.html">Use it with your own simulator</a></li>
       <li><a href="recording.html">Recording takes</a></li>
@@ -44,7 +44,7 @@
   <main id="main">
     <article class="prose">
 <h1 id="quick-start">Quick start</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#1-start-the-demo-server">1. Start the demo server</a></li><li><a href="#2-connect-a-client">2. Connect a client</a></li><li><a href="#3-controls-in-the-headset">3. Controls in the headset</a></li><li><a href="#4-desktop-client-controls">4. Desktop client controls</a></li><li><a href="#5-record-a-take-and-look-at-it">5. Record a take and look at it</a></li></ol></nav>
-<p>Run the bundled demo, connect a headset (or the desktop client), move two grippers, record a take, and look at it on the status page. Needs the Python library (<a href="install.html#1-the-python-library">Install</a>); the headset part needs the app installed (<a href="quest-setup.html">Quest 2 setup</a>).</p>
+<p>Run the bundled demo, connect a headset (or the desktop client), move two grippers, record a take, and look at it on the status page. Needs the Python library (<a href="install.html#1-the-python-library">Install</a>); the headset part needs the app installed (<a href="quest-setup.html">Headset setup</a>).</p>
 <h2 id="1-start-the-demo-server">1. Start the demo server <a class="anchor" href="#1-start-the-demo-server" aria-label="Link to this section">#</a></h2>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">quest-teleop-demo                 # same as: python -m quest_teleop.demo</code></pre></div>
 <p>A mock world: two floating grippers over a table, a cube to pick and place, a rope and a cloth. It prints the addresses it listens on and the status page's address:</p>
@@ -53,7 +53,7 @@
 <p>Every 5 seconds while a client is connected it prints frames per second, traffic and the client's latency. Stop it with Ctrl-C.</p>
 <div class="table"><table><thead><tr><th scope="col">Option</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>--port</code></td><td>47800</td><td>TCP and UDP port of the server</td></tr><tr><td><code>--hz</code></td><td>60</td><td>simulation and state rate</td></tr><tr><td><code>--mode</code></td><td><code>clutch</code></td><td><code>clutch</code>: the gripper follows the hand's motion while the grip is held; <code>absolute</code>: the gripper goes where the hand is</td></tr><tr><td><code>--seconds</code></td><td>0</td><td>stop after this long (0: run until Ctrl-C)</td></tr><tr><td><code>--status-port</code></td><td>8800</td><td>port of the status page (0: no status page)</td></tr><tr><td><code>--data-dir</code></td><td><code>$TELEOP_DATA_DIR</code>, else <code>~/teleop_recordings</code></td><td>where takes are saved</td></tr><tr><td><code>--session</code></td><td>date and time</td><td>name of this run (a folder in the data directory)</td></tr><tr><td><code>--host-label</code></td><td>host name and address</td><td>what the headset shows as the computer</td></tr></tbody></table></div>
 <h2 id="2-connect-a-client">2. Connect a client <a class="anchor" href="#2-connect-a-client" aria-label="Link to this section">#</a></h2>
-<p><strong>Headset over Wi-Fi.</strong> Start <strong>Quest Teleop</strong> in the headset (Library, filter "Unknown sources"). It finds the server by itself if the firewall ports are open (<a href="quest-setup.html#5-network-wi-fi">Quest 2 setup</a>).</p>
+<p><strong>Headset over Wi-Fi.</strong> Start the app in the headset (Library, filter "Unknown sources", labelled <strong>Quest Teleop</strong>). It finds the server by itself if the firewall ports are open (<a href="quest-setup.html#5-network-wi-fi">Headset setup</a>).</p>
 <p><strong>Headset over USB.</strong></p>
 <div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb reverse tcp:47800 tcp:47800
 adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity</code></pre></div>
@@ -77,7 +77,7 @@ adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivit
     </article>
     <footer class="page-foot">
       <p class="md-link">This page as Markdown: <a href="quick-start.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/quick-start.md</code></a></p>
-      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="quest-setup.html"><span class="label">Previous</span>Quest 2 setup</a><a class="pn next" href="library.html"><span class="label">Next</span>Use it with your own simulator</a></nav>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="quest-setup.html"><span class="label">Previous</span>Headset setup</a><a class="pn next" href="library.html"><span class="label">Next</span>Use it with your own simulator</a></nav>
     </footer>
   </main>
 </div>

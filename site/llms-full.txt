@@ -1,12 +1,13 @@
 # quest-teleop
 
-> Generic VR teleoperation for the Meta Quest 2: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
-> no Gradle) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
+> Generic VR teleoperation for Meta Quest headsets: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
+> no Gradle; standard OpenXR, tested on a Quest 2) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
 > both controllers every display frame, sends haptics and text cues, shows an in-headset panel with your own
 > actions, records takes, and serves a local status page with a trajectory viewer. Includes a desktop test client
 > and a demo.
 
 - Repository: https://github.com/EntangledQuantum/quest-teleop (MIT licence), version 0.2.0
+- Headsets: Meta Quest headsets through standard OpenXR (manifest: Quest 2, Quest Pro, Quest 3, Quest 3S); tested on a Quest 2
 - Install the library: `pip install git+https://github.com/EntangledQuantum/quest-teleop` (Python 3.10+). Commands: `quest-teleop-demo`, `quest-teleop-probe`
 - Build and install the headset app (Linux, from a clone): `android/setup_toolchain.sh` then `android/build_apk.sh install`
 - Network: TCP 47800 and UDP 47800-47801 open on the computer, or `adb reverse tcp:47800 tcp:47800` over USB
@@ -29,7 +30,8 @@ Setting up quest-teleop for a user, in order:
    debugging"; turn "Link auto connect" off. Then check `adb devices` lists the headset as `device`.
 4. Some steps need root: the udev rule on Linux and the firewall ports. Show the user the exact command and ask
    before running anything with sudo. Over USB (`adb reverse`), the firewall change is not needed.
-5. `android/build_apk.sh install`, then `quest-teleop-demo`, then start Quest Teleop in the headset. The status
+5. `android/build_apk.sh install`, then `quest-teleop-demo`, then start the app in the headset (Library, Unknown
+   sources, labelled "Quest Teleop"). The status
    page at http://localhost:8800 (or `curl -s http://localhost:8800/api/state`) shows whether the headset connected.
 6. To connect the user's own simulator or robot, follow "Use it with your own simulator" (a complete runnable
    example is at the top) and "Recording takes".
@@ -42,8 +44,9 @@ Setting up quest-teleop for a user, in order:
 
 # quest-teleop documentation
 
-quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest 2 (or a later Quest) without a game
-engine. It has four parts:
+quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The
+headset app uses standard OpenXR, so it targets Meta Quest headsets in general; it is tested on a Quest 2, and notes
+that only apply to the Quest 2 say so. quest-teleop has four parts:
 
 * **Headset app** (`client/quest`): native OpenXR + OpenGL ES 3 in C++, one `NativeActivity`, no Java, no Gradle.
   It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every
@@ -61,7 +64,7 @@ Read them in this order the first time.
 
 1. [Install](https://entangledquantum.github.io/quest-teleop/docs/install.md): the Python library with pip; the Android toolchain, building and installing the APK; the
    desktop client.
-2. [Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md): developer mode, USB debugging, the udev rule on Linux, firewall ports, USB link
+2. [Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md): developer mode, USB debugging, the udev rule on Linux, firewall ports, USB link
    with `adb reverse`.
 3. [Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-start.md): run the demo, connect the headset or the desktop client, the controls.
 4. [Use it with your own simulator](https://entangledquantum.github.io/quest-teleop/docs/library.md): the server API, streaming a scene, input, haptics, cues, the panel
@@ -106,6 +109,7 @@ desktop client (optional, for trying a server without a headset).
 | cmake 3.18 or newer, make, curl, unzip, zip | building the APK |
 | a Java runtime, version 17 or newer | `sdkmanager`, `apksigner` and `keytool` while building the APK |
 | about 2.5 GB of disk | the Android SDK tools, the NDK and the OpenXR loader |
+| a Meta Quest headset (tested on a Quest 2) in developer mode | running the app |
 | a USB-C data cable | installing the app on the headset |
 
 On Debian or Ubuntu, for example:
@@ -163,7 +167,7 @@ It installs into `~/android-sdk` (set `ANDROID_HOME` to choose another folder), 
 | Android command-line tools | 11076708 |
 | platform-tools (`adb`) | latest |
 | build-tools (`aapt2`, `zipalign`, `apksigner`) | 34.0.0 |
-| platform (`android.jar`) | android-32 (Quest 2 runs Android 12L) |
+| platform (`android.jar`) | android-32 (the APK targets API 32; its minimum is API 29) |
 | NDK | 27.2.12479018 (r27c) |
 | Khronos OpenXR loader for Android | 1.1.65 |
 
@@ -190,7 +194,7 @@ is missing). That is all a sideloaded developer build needs.
 ### 2.3 Install it on the headset
 
 The headset must be in developer mode, connected by USB, and listed by `adb devices` as `device`: see
-[Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md) first. Then:
+[Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md) first. Then:
 
 ```bash
 android/build_apk.sh install    # builds, runs `adb install -r build/quest-teleop.apk`, and starts the app
@@ -208,7 +212,7 @@ An APK that is already built installs with plain adb:
 adb install -r build/quest-teleop.apk
 ```
 
-In the headset the app is under **Library**, filter **Unknown sources**, as **Quest Teleop**. Its package name is
+In the headset the app is under **Library**, filter **Unknown sources**; its label there is **Quest Teleop**. Its package name is
 `com.entangledquantum.questteleop`.
 
 ## 3. The desktop client (optional)
@@ -248,16 +252,18 @@ adb uninstall com.entangledquantum.questteleop
 The toolchain is the folder `~/android-sdk` (or your `ANDROID_HOME`); delete it by hand only if nothing else uses
 it.
 
-Next: [Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md).
+Next: [Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md).
 
 
 ---
 
 <!-- page: https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md -->
 
-# Quest 2 setup
+# Headset setup
 
-What the headset needs before the app can be installed and reach your computer. Steps marked **(person)** need
+What the headset needs before the app can be installed and reach your computer. These steps are written for and
+tested on a **Quest 2**. Other Meta Quest headsets use the same developer mode, USB debugging and network setup;
+menu names can differ between headsets and system versions. Steps marked **(person)** need
 someone with the headset or the phone; steps marked **(root)** need `sudo` on the computer.
 
 ## 1. Developer mode (once) (person)
@@ -291,7 +297,7 @@ adb devices          # adb is ~/android-sdk/platform-tools/adb after android/set
 
 ### udev rule on Linux (root)
 
-Gives your user access to the headset's USB device (vendor id `2833`):
+Gives your user access to the headset's USB device (Meta's USB vendor id `2833`):
 
 ```bash
 echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="2833", MODE="0666", GROUP="plugdev"' | sudo tee /etc/udev/rules.d/51-oculus.rules
@@ -307,7 +313,7 @@ android/build_apk.sh install
 ```
 
 See [Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#2-the-headset-app). The app is in the headset under **Library**, filter **Unknown
-sources**, as **Quest Teleop**.
+sources**, labelled **Quest Teleop**.
 
 ## 5. Network: Wi-Fi
 
@@ -355,7 +361,7 @@ same ([Measurements](https://entangledquantum.github.io/quest-teleop/docs/measur
 
 ## 7. Start and stop the app
 
-From the headset: **Library**, **Unknown sources**, **Quest Teleop**. From the computer:
+From the headset: **Library**, **Unknown sources**, then the app labelled **Quest Teleop**. From the computer:
 
 ```bash
 adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity
@@ -368,7 +374,7 @@ Launch options, added to `am start` as `--es NAME VALUE`:
 |---|---|---|
 | `server` | `--es server 192.168.1.20` or `--es server 192.168.1.20:47800` | connect to this address instead of discovering the server |
 | `hz` | `--es hz 90` | display refresh rate (default: the system's, 72 Hz on a Quest 2) |
-| `passthrough` | `--es passthrough 0` | start without passthrough (a floor grid is drawn instead) |
+| `passthrough` | `--es passthrough 0` | start without passthrough (a floor grid is drawn instead). On a Quest 2 passthrough is grey-scale |
 
 The app's log:
 
@@ -387,7 +393,7 @@ Next: [Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-s
 
 Run the bundled demo, connect a headset (or the desktop client), move two grippers, record a take, and look at it
 on the status page. Needs the Python library ([Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#1-the-python-library)); the headset part needs
-the app installed ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md)).
+the app installed ([Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md)).
 
 ## 1. Start the demo server
 
@@ -419,8 +425,8 @@ with Ctrl-C.
 
 ## 2. Connect a client
 
-**Headset over Wi-Fi.** Start **Quest Teleop** in the headset (Library, filter "Unknown sources"). It finds the
-server by itself if the firewall ports are open ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#5-network-wi-fi)).
+**Headset over Wi-Fi.** Start the app in the headset (Library, filter "Unknown sources", labelled **Quest Teleop**). It finds the
+server by itself if the firewall ports are open ([Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#5-network-wi-fi)).
 
 **Headset over USB.**
 
@@ -1346,11 +1352,11 @@ Problems by symptom. The app's log is `adb logcat -s quest-teleop`; the server p
 
 * **Nothing listed.** Put the headset on: there is a **"USB detected"** notification to tap and allow. Until it is
   accepted the headset is not visible to adb. If there is no notification, try another cable (many USB-C cables only
-  charge) or another port, and check that developer mode is on ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#1-developer-mode-once-person)).
+  charge) or another port, and check that developer mode is on ([Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#1-developer-mode-once-person)).
 * **`unauthorized`.** Accept **"Allow USB debugging"** in the headset, with "Always allow from this computer" ticked.
   If the prompt does not come back: `adb kill-server`, replug, put the headset on.
 * **`no permissions` (Linux).** Add the udev rule for vendor id `2833`
-  ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#udev-rule-on-linux-root)), then replug.
+  ([Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#udev-rule-on-linux-root)), then replug.
 * **The headset starts Quest Link when plugged in.** Turn "Link auto connect" (or "Turn on Link") off.
 * **`adb: command not found`.** It is in `~/android-sdk/platform-tools/`; add that to `PATH`.
 
@@ -1366,7 +1372,7 @@ Problems by symptom. The app's log is `adb logcat -s quest-teleop`; the server p
 The app shows "Looking for a server on this network". Check, in this order:
 
 1. The server is running and printed `listening on 0.0.0.0:47800`.
-2. The computer's firewall allows **TCP 47800 and UDP 47800-47801** ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#5-network-wi-fi)).
+2. The computer's firewall allows **TCP 47800 and UDP 47800-47801** ([Headset setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#5-network-wi-fi)).
    This is the most common cause.
 3. Headset and computer are on the same network: not a guest network, no client / AP isolation, no VPN on the
    computer that captures the local traffic.
@@ -1426,9 +1432,10 @@ area. In the headset, open the menu and use the grips and sticks to place and sc
 
 ## Which headsets work?
 
-It is built and measured on a **Meta Quest 2**. The app is plain OpenXR with Touch controller bindings, and its
-manifest lists Quest 2, Quest Pro, Quest 3 and Quest 3S as supported devices; only the Quest 2 has been measured
-([Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md)).
+Meta Quest headsets. The app uses standard OpenXR with Touch controller bindings, and its manifest lists Quest 2,
+Quest Pro, Quest 3 and Quest 3S as supported devices. It is tested and measured on a **Quest 2**
+([Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md)); Quest 2-specific details (72 Hz default refresh rate, grey-scale passthrough,
+controllers that ignore the vibration frequency) are marked as such in these pages.
 
 ## Do I need Unity, Unreal, Android Studio or Gradle?
 

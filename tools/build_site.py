@@ -34,7 +34,7 @@ PAGES = [
     ("index", "Overview", "What quest-teleop is, its parts, and the order to read these pages in."),
     ("install", "Install", "Install the Python library with pip; install the Android toolchain, build the APK and "
                            "install it on the headset; build the desktop client; run the tests."),
-    ("quest-setup", "Quest 2 setup", "Developer mode, the USB detected / allow USB debugging prompts, Link auto "
+    ("quest-setup", "Headset setup", "Written for and tested on a Quest 2: developer mode, the USB detected / allow USB debugging prompts, Link auto "
                                      "connect off, the udev rule on Linux, firewall ports TCP 47800 and UDP "
                                      "47800-47801, USB link with adb reverse, launch options."),
     ("quick-start", "Quick start", "Run the bundled demo, connect the headset, the desktop client or the probe, "
@@ -332,13 +332,14 @@ def absolutize(md: str, slug: str) -> str:
 
 LLMS_HEAD = f"""# quest-teleop
 
-> Generic VR teleoperation for the Meta Quest 2: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
-> no Gradle) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
+> Generic VR teleoperation for Meta Quest headsets: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
+> no Gradle; standard OpenXR, tested on a Quest 2) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
 > both controllers every display frame, sends haptics and text cues, shows an in-headset panel with your own
 > actions, records takes, and serves a local status page with a trajectory viewer. Includes a desktop test client
 > and a demo.
 
 - Repository: {REPO} (MIT licence), version {VERSION}
+- Headsets: Meta Quest headsets through standard OpenXR (manifest: Quest 2, Quest Pro, Quest 3, Quest 3S); tested on a Quest 2
 - Install the library: `pip install git+{REPO}` (Python 3.10+). Commands: `quest-teleop-demo`, `quest-teleop-probe`
 - Build and install the headset app (Linux, from a clone): `android/setup_toolchain.sh` then `android/build_apk.sh install`
 - Network: TCP 47800 and UDP 47800-47801 open on the computer, or `adb reverse tcp:47800 tcp:47800` over USB
@@ -359,7 +360,8 @@ Setting up quest-teleop for a user, in order:
    debugging"; turn "Link auto connect" off. Then check `adb devices` lists the headset as `device`.
 4. Some steps need root: the udev rule on Linux and the firewall ports. Show the user the exact command and ask
    before running anything with sudo. Over USB (`adb reverse`), the firewall change is not needed.
-5. `android/build_apk.sh install`, then `quest-teleop-demo`, then start Quest Teleop in the headset. The status
+5. `android/build_apk.sh install`, then `quest-teleop-demo`, then start the app in the headset (Library, Unknown
+   sources, labelled "Quest Teleop"). The status
    page at http://localhost:8800 (or `curl -s http://localhost:8800/api/state`) shows whether the headset connected.
 6. To connect the user's own simulator or robot, follow "Use it with your own simulator" (a complete runnable
    example is at the top) and "Recording takes".
