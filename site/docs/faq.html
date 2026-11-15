@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ · quest-teleop docs</title>
+<meta name="description" content="Supported headsets, engines, Link, operating systems, Wi-Fi or USB, bandwidth, several headsets, own clients, privacy, licence.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/faq.html">
+<link rel="alternate" type="text/markdown" href="faq.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html" aria-current="page">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="faq">FAQ</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#which-headsets-work">Which headsets work?</a></li><li><a href="#do-i-need-unity-unreal-android-studio-or-gradle">Do I need Unity, Unreal, Android Studio or Gradle?</a></li><li><a href="#does-it-need-quest-link-air-link-or-a-pc-vr-runtime">Does it need Quest Link, Air Link or a PC VR runtime?</a></li><li><a href="#is-the-python-library-tied-to-a-simulator-or-robot">Is the Python library tied to a simulator or robot?</a></li><li><a href="#which-operating-systems-are-supported">Which operating systems are supported?</a></li><li><a href="#how-do-i-install-the-python-library">How do I install the Python library?</a></li><li><a href="#wi-fi-or-usb">Wi-Fi or USB?</a></li><li><a href="#how-much-bandwidth-does-it-use">How much bandwidth does it use?</a></li><li><a href="#can-several-headsets-connect-at-once">Can several headsets connect at once?</a></li><li><a href="#can-i-write-my-own-client-or-server">Can I write my own client or server?</a></li><li><a href="#does-it-support-hand-tracking">Does it support hand tracking?</a></li><li><a href="#what-is-recorded-and-where">What is recorded, and where?</a></li><li><a href="#is-anything-sent-to-the-internet">Is anything sent to the internet?</a></li><li><a href="#licence">Licence?</a></li></ol></nav>
+<h2 id="which-headsets-work">Which headsets work? <a class="anchor" href="#which-headsets-work" aria-label="Link to this section">#</a></h2>
+<p>It is built and measured on a <strong>Meta Quest 2</strong>. The app is plain OpenXR with Touch controller bindings, and its manifest lists Quest 2, Quest Pro, Quest 3 and Quest 3S as supported devices; only the Quest 2 has been measured (<a href="measurements.html">Measurements</a>).</p>
+<h2 id="do-i-need-unity-unreal-android-studio-or-gradle">Do I need Unity, Unreal, Android Studio or Gradle? <a class="anchor" href="#do-i-need-unity-unreal-android-studio-or-gradle" aria-label="Link to this section">#</a></h2>
+<p>No. The headset app is about 1 MB of C++ (OpenXR, EGL, OpenGL ES 3, one <code>NativeActivity</code>, no Java), built by two shell scripts with the NDK, CMake and the Android build tools.</p>
+<h2 id="does-it-need-quest-link-air-link-or-a-pc-vr-runtime">Does it need Quest Link, Air Link or a PC VR runtime? <a class="anchor" href="#does-it-need-quest-link-air-link-or-a-pc-vr-runtime" aria-label="Link to this section">#</a></h2>
+<p>No. The app runs standalone on the headset and talks to your Python program over the local network or a USB cable. Turn "Link auto connect" off so the headset does not start Link when the cable is plugged in.</p>
+<h2 id="is-the-python-library-tied-to-a-simulator-or-robot">Is the Python library tied to a simulator or robot? <a class="anchor" href="#is-the-python-library-tied-to-a-simulator-or-robot" aria-label="Link to this section">#</a></h2>
+<p>No. It streams meshes, poses, deforming meshes and polylines that you set every step, and gives you controller poses and buttons. The demo uses a small numpy mock world; any simulator or robot driver that runs in, or can talk to, a Python process works.</p>
+<h2 id="which-operating-systems-are-supported">Which operating systems are supported? <a class="anchor" href="#which-operating-systems-are-supported" aria-label="Link to this section">#</a></h2>
+<p>The build scripts (<code>android/setup_toolchain.sh</code>, <code>android/build_apk.sh</code>) and the desktop client are for Linux. The Python library uses only the standard library and numpy; these pages assume Linux and do not cover other systems.</p>
+<h2 id="how-do-i-install-the-python-library">How do I install the Python library? <a class="anchor" href="#how-do-i-install-the-python-library" aria-label="Link to this section">#</a></h2>
+<p>From GitHub: <code>pip install git+https://github.com/EntangledQuantum/quest-teleop</code> (<a href="install.html#1-the-python-library">Install</a>).</p>
+<h2 id="wi-fi-or-usb">Wi-Fi or USB? <a class="anchor" href="#wi-fi-or-usb" aria-label="Link to this section">#</a></h2>
+<p>Both work. On a Quest 2 the median latency is the same (about 14 ms with the demo); Wi-Fi occasionally delivers a frame one or two display frames late. USB (<code>adb reverse</code>) needs no firewall change and no shared network.</p>
+<h2 id="how-much-bandwidth-does-it-use">How much bandwidth does it use? <a class="anchor" href="#how-much-bandwidth-does-it-use" aria-label="Link to this section">#</a></h2>
+<p>Controller input is 292 bytes per display frame (168 kbit/s at 72 Hz). The state stream sends only what changed: the demo uses 0.2 to 0.6 Mbit/s; a scene with 82,000 triangles and 2,000 streamed points about 1.5 Mbit/s at 50 Hz.</p>
+<h2 id="can-several-headsets-connect-at-once">Can several headsets connect at once? <a class="anchor" href="#can-several-headsets-connect-at-once" aria-label="Link to this section">#</a></h2>
+<p>Several clients can connect and all of them see the scene. The input of one of them drives the simulator: of those that are sending input, the one connected the longest (<code>TeleopServer.controller()</code>).</p>
+<h2 id="can-i-write-my-own-client-or-server">Can I write my own client or server? <a class="anchor" href="#can-i-write-my-own-client-or-server" aria-label="Link to this section">#</a></h2>
+<p>Yes. The <a href="protocol.html">protocol</a> is documented byte by byte, with reference implementations in Python (<code>server/quest_teleop/protocol.py</code>) and C++ (<code>client/core/protocol.h</code>), and a headless Python client (<code>quest_teleop.probe</code>).</p>
+<h2 id="does-it-support-hand-tracking">Does it support hand tracking? <a class="anchor" href="#does-it-support-hand-tracking" aria-label="Link to this section">#</a></h2>
+<p>No. It uses the Touch controllers; nothing needs hand tracking or standing.</p>
+<h2 id="what-is-recorded-and-where">What is recorded, and where? <a class="anchor" href="#what-is-recorded-and-where" aria-label="Link to this section">#</a></h2>
+<p>Tool poses, gripper openings and states, controllers, time, and any per-step data you add, one <code>.npz</code> per take in <code>~/teleop_recordings</code> (or <code>$TELEOP_DATA_DIR</code>). See <a href="recording.html">Recording takes</a>.</p>
+<h2 id="is-anything-sent-to-the-internet">Is anything sent to the internet? <a class="anchor" href="#is-anything-sent-to-the-internet" aria-label="Link to this section">#</a></h2>
+<p>No. The server, the status page and the headset app talk only on your local network or USB cable. The status page loads nothing from the internet. Only <code>android/setup_toolchain.sh</code> downloads, from <code>dl.google.com</code> and <code>github.com/KhronosGroup</code>.</p>
+<h2 id="licence">Licence? <a class="anchor" href="#licence" aria-label="Link to this section">#</a></h2>
+<p>MIT. Third-party parts: the Khronos OpenXR loader (Apache-2.0 / MIT, downloaded at build time and shipped in the APK), the Android NDK's <code>native_app_glue</code> (Apache-2.0), zlib, and the fonts Host Grotesk and Martian Mono (SIL Open Font License 1.1).</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="faq.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/faq.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="troubleshooting.html"><span class="label">Previous</span>Troubleshooting</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

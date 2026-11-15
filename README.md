@@ -3,6 +3,10 @@
 Teleoperate anything from a **Meta Quest 2** (or a later Quest), without a game engine: a small native headset
 app, a Python library for the computer side, a recorder for the trajectories, and a local web page to watch it all.
 
+**Website and documentation: <https://entangledquantum.github.io/quest-teleop/>.** For an AI coding agent:
+"Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install quest-teleop, set up my
+Quest 2, and show me how to use it."
+
 * **Headset app** (`client/`): native OpenXR + OpenGL ES 3 in C++ (one `NativeActivity`, no Java, no Gradle). It
   knows nothing about your task. It connects to a server on the local network, receives a 3D scene (meshes and
   colours once, then only what moves), draws it in the room, lets the user move / turn / scale it, sends both
@@ -210,8 +214,9 @@ client/desktop         X11 / EGL window and off-screen entry point
 android/               setup_toolchain.sh, build_apk.sh
 server/quest_teleop    the Python library (protocol, scene, server, panel, teleop logic, cues, recording, status page, demo, probe)
 tests/                 pytest: protocol round trips, server and probe over loopback, packet loss, recording, status page
-tools/                 font atlas generator, screenshot and check scripts, the fonts
+tools/                 font atlas generator, site generator, screenshot and check scripts, the fonts
 docs/                  PROTOCOL.md, MEASUREMENTS.md, img/
+site/                  the GitHub Pages site: landing page, docs as HTML and Markdown, llms.txt (tools/build_site.py)
 ```
 
 ```bash

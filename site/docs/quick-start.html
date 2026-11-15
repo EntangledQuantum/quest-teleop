@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick start · quest-teleop docs</title>
+<meta name="description" content="Run the bundled demo, connect the headset, the desktop client or the probe, the controls, record a take and open it on the status page.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/quick-start.html">
+<link rel="alternate" type="text/markdown" href="quick-start.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html" aria-current="page">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="quick-start">Quick start</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#1-start-the-demo-server">1. Start the demo server</a></li><li><a href="#2-connect-a-client">2. Connect a client</a></li><li><a href="#3-controls-in-the-headset">3. Controls in the headset</a></li><li><a href="#4-desktop-client-controls">4. Desktop client controls</a></li><li><a href="#5-record-a-take-and-look-at-it">5. Record a take and look at it</a></li></ol></nav>
+<p>Run the bundled demo, connect a headset (or the desktop client), move two grippers, record a take, and look at it on the status page. Needs the Python library (<a href="install.html#1-the-python-library">Install</a>); the headset part needs the app installed (<a href="quest-setup.html">Quest 2 setup</a>).</p>
+<h2 id="1-start-the-demo-server">1. Start the demo server <a class="anchor" href="#1-start-the-demo-server" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">quest-teleop-demo                 # same as: python -m quest_teleop.demo</code></pre></div>
+<p>A mock world: two floating grippers over a table, a cube to pick and place, a rope and a cloth. It prints the addresses it listens on and the status page's address:</p>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>[quest-teleop] listening on 0.0.0.0:47800 (TCP + UDP), addresses: ...
+[demo] status page: http://localhost:8800    takes are saved in ~/teleop_recordings/...</code></pre></div>
+<p>Every 5 seconds while a client is connected it prints frames per second, traffic and the client's latency. Stop it with Ctrl-C.</p>
+<div class="table"><table><thead><tr><th scope="col">Option</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>--port</code></td><td>47800</td><td>TCP and UDP port of the server</td></tr><tr><td><code>--hz</code></td><td>60</td><td>simulation and state rate</td></tr><tr><td><code>--mode</code></td><td><code>clutch</code></td><td><code>clutch</code>: the gripper follows the hand's motion while the grip is held; <code>absolute</code>: the gripper goes where the hand is</td></tr><tr><td><code>--seconds</code></td><td>0</td><td>stop after this long (0: run until Ctrl-C)</td></tr><tr><td><code>--status-port</code></td><td>8800</td><td>port of the status page (0: no status page)</td></tr><tr><td><code>--data-dir</code></td><td><code>$TELEOP_DATA_DIR</code>, else <code>~/teleop_recordings</code></td><td>where takes are saved</td></tr><tr><td><code>--session</code></td><td>date and time</td><td>name of this run (a folder in the data directory)</td></tr><tr><td><code>--host-label</code></td><td>host name and address</td><td>what the headset shows as the computer</td></tr></tbody></table></div>
+<h2 id="2-connect-a-client">2. Connect a client <a class="anchor" href="#2-connect-a-client" aria-label="Link to this section">#</a></h2>
+<p><strong>Headset over Wi-Fi.</strong> Start <strong>Quest Teleop</strong> in the headset (Library, filter "Unknown sources"). It finds the server by itself if the firewall ports are open (<a href="quest-setup.html#5-network-wi-fi">Quest 2 setup</a>).</p>
+<p><strong>Headset over USB.</strong></p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb reverse tcp:47800 tcp:47800
+adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity</code></pre></div>
+<p><strong>No headset: the desktop client</strong> (<a href="install.html#3-the-desktop-client-optional">Install</a>):</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">build/desktop/qt_desktop</code></pre></div>
+<p><strong>No display at all: the probe</strong>, a headless Python client that moves a synthetic controller and prints latency and bandwidth:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">quest-teleop-probe --host 127.0.0.1 --seconds 10 --motion circle     # --motion still | circle | jump, --tcp-only</code></pre></div>
+<p>When the scene appears, the headset places the working area in front of you at a comfortable size.</p>
+<h2 id="3-controls-in-the-headset">3. Controls in the headset <a class="anchor" href="#3-controls-in-the-headset" aria-label="Link to this section">#</a></h2>
+<div class="table"><table><thead><tr><th scope="col">Control</th><th scope="col">Action</th></tr></thead><tbody><tr><td><strong>Grip</strong> (hold)</td><td>move that hand's gripper (right controller: right gripper, left: left)</td></tr><tr><td><strong>Trigger</strong> (hold)</td><td>close the gripper slowly (deeper is faster)</td></tr><tr><td><strong>A / X</strong> (hold)</td><td>open the gripper slowly</td></tr><tr><td><strong>B</strong></td><td>start / stop recording a take</td></tr><tr><td><strong>Left menu button</strong></td><td>open / close the panel; the server is told and holds the robot meanwhile</td></tr></tbody></table></div>
+<p>With the panel open:</p>
+<div class="table"><table><thead><tr><th scope="col">Control</th><th scope="col">Action</th></tr></thead><tbody><tr><td>point + <strong>trigger</strong></td><td>press the button the beam points at; "danger" actions (reset, delete) need the trigger held for about a second</td></tr><tr><td>one <strong>grip</strong></td><td>drag and turn the scene</td></tr><tr><td>both <strong>grips</strong></td><td>scale the scene</td></tr><tr><td>left <strong>stick</strong></td><td>slide the scene</td></tr><tr><td>right <strong>stick</strong></td><td>turn and raise the scene</td></tr></tbody></table></div>
+<p>The panel shows the connection, the session, the demo's actions (start recording, reset the scene, delete the last take), the control legend, and settings: larger text, left-handed, passthrough, shadows, scene size, placement.</p>
+<p><strong>Try the go-back cue.</strong> Each gripper has a limited reach (a sphere around its base post) and cannot enter the table. Hold the grip and pull your hand beyond that: the gripper stops, the controller vibrates, and the headset shows a see-through shell where the gripper really is, a marker where your hand asks it to be, a line between them, and the text "Robot cannot follow". Bring your hand back to the highlighted tool to continue.</p>
+<h2 id="4-desktop-client-controls">4. Desktop client controls <a class="anchor" href="#4-desktop-client-controls" aria-label="Link to this section">#</a></h2>
+<div class="table"><table><thead><tr><th scope="col">Input</th><th scope="col">Action</th></tr></thead><tbody><tr><td>right-drag</td><td>look around</td></tr><tr><td><code>W A S D Q E</code></td><td>move the head</td></tr><tr><td>left-drag</td><td>move the active hand (with Shift: turn it)</td></tr><tr><td>mouse wheel</td><td>move the hand nearer / farther</td></tr><tr><td><code>TAB</code></td><td>switch between left and right hand</td></tr><tr><td><code>G</code></td><td>grip</td></tr><tr><td><code>T</code></td><td>trigger</td></tr><tr><td><code>1</code> / <code>2</code></td><td>primary / secondary button (A / B on the right hand)</td></tr><tr><td><code>M</code></td><td>menu</td></tr><tr><td><code>ESC</code></td><td>quit</td></tr></tbody></table></div>
+<h2 id="5-record-a-take-and-look-at-it">5. Record a take and look at it <a class="anchor" href="#5-record-a-take-and-look-at-it" aria-label="Link to this section">#</a></h2>
+<ol><li>Press <strong>B</strong> (desktop: <code>TAB</code> to the right hand, then <code>2</code>). The wrist card shows <code>REC 00:00 take 1</code>.</li><li>Move a gripper, close it on the cube, move it, open it.</li><li>Press <strong>B</strong> again. The headset shows "Take 1 saved" with the number of steps.</li><li>Open <a href="http://localhost:8800">http://localhost:8800</a> on the computer. Under <strong>Recordings</strong>, select the take: the trajectory view shows each gripper's path in 3D with the gripper state marked along it.</li></ol>
+<p>The take is a <code>.npz</code> file in <code>~/teleop_recordings/&lt;session&gt;/</code>. See <a href="recording.html">Recording takes</a> for its contents and <a href="status-page.html">Status page</a> for the page.</p>
+<p>Next: <a href="library.html">Use it with your own simulator</a>.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="quick-start.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/quick-start.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="quest-setup.html"><span class="label">Previous</span>Quest 2 setup</a><a class="pn next" href="library.html"><span class="label">Next</span>Use it with your own simulator</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

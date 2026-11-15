@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recording takes · quest-teleop docs</title>
+<meta name="description" content="TakeRecorder, the files on disk, every array in a take, and loading takes.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/recording.html">
+<link rel="alternate" type="text/markdown" href="recording.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html" aria-current="page">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="recording-takes">Recording takes</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#recording">Recording</a></li><li><a href="#files">Files</a></li><li><a href="#arrays-in-a-take">Arrays in a take</a></li><li><a href="#loading-takes">Loading takes</a></li></ol></nav>
+<p>A <strong>take</strong> is one recorded stretch of teleoperation: the tools' poses, the grippers, the controllers and the time at every step, plus any data of your own. <code>TakeRecorder</code> writes one compressed <code>.npz</code> file per take and keeps an index of all takes, which the <a href="status-page.html">status page</a> lists and opens in the trajectory viewer.</p>
+<h2 id="recording">Recording <a class="anchor" href="#recording" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import TakeRecorder
+
+rec = TakeRecorder(tools=("left", "right"), max_opening=0.08)   # folder: $TELEOP_DATA_DIR or ~/teleop_recordings
+rec.write_session({"application": "my sim", "robot": "two grippers"})   # optional, once per session
+
+rec.start(start_state={"cube": cube_pos})    # optional: your state just before the first step
+while recording:
+    rec.add(sim.time, tool_pos, tool_quat,                # (N, 3), (N, 4) for N tools
+            opening=openings, opening_cmd=opening_cmds,   # (N,) metres
+            target_pos=cmd_pos, target_quat=cmd_quat,
+            tool_state=[1, 0],                            # 0 idle, 1 following the hand, 2 lost
+            ctrl_pos=..., ctrl_quat=..., trigger=..., squeeze=..., buttons=...,
+            extra={"cube_pos": cube_pos, "rope": rope_points})
+entry = rec.stop(info={"valid": True, "flags": []})       # writes the file in the background</code></pre></div>
+<p><code>add</code> does nothing while the recorder is not recording, so it can be called every step. Give the same fields at every step of a take.</p>
+<div class="table"><table><thead><tr><th scope="col"><code>TakeRecorder</code></th><th scope="col"></th></tr></thead><tbody><tr><td><code>TakeRecorder(root=None, session=None, tools=("left", "right"), max_opening=None, up_axis=2)</code></td><td><code>root</code>: data folder (else <code>$TELEOP_DATA_DIR</code>, else <code>~/teleop_recordings</code>); <code>session</code>: run name (default: date and time); <code>max_opening</code>: full gripper opening in metres, one value or one per tool (for the open / closed thresholds)</td></tr><tr><td><code>start(start_state=None)</code></td><td>begin a take</td></tr><tr><td><code>add(t, tool_pos, tool_quat=None, *, opening, opening_cmd, grip_state, target_pos, target_quat, tool_state, ctrl_pos, ctrl_quat, trigger, squeeze, buttons, extra)</code></td><td>one step; everything after <code>tool_pos</code> is optional</td></tr><tr><td><code>stop(info=None)</code></td><td>end the take, write it, return its index entry (or <code>None</code> if nothing was recorded). <code>info</code> is merged into the entry</td></tr><tr><td><code>discard()</code></td><td>end the take without writing it</td></tr><tr><td><code>delete_last()</code></td><td>delete the newest take of this session (file and index entry)</td></tr><tr><td><code>write_session(info)</code></td><td>write <code>session.json</code> for this session</td></tr><tr><td><code>wait()</code></td><td>wait until the last take is written (call before exiting)</td></tr><tr><td><code>recording</code>, <code>steps</code>, <code>take</code>, <code>n_saved</code>, <code>elapsed</code>, <code>root</code>, <code>session</code></td><td>state: recording or not, steps so far, next take number, takes saved this session, seconds since start, folders</td></tr></tbody></table></div>
+<p>The <code>info</code> keys <code>valid</code> (true / false) and <code>flags</code> (a list of strings) are shown in the status page's validity column.</p>
+<h2 id="files">Files <a class="anchor" href="#files" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>~/teleop_recordings/index.json                      every take: file, session, take, started, steps, seconds,
+                                                    wall_seconds, rate_hz, tools, and your info
+~/teleop_recordings/&lt;session&gt;/session.json          what write_session() was given
+~/teleop_recordings/&lt;session&gt;/take_003_&lt;time&gt;.npz   one take</code></pre></div>
+<h2 id="arrays-in-a-take">Arrays in a take <a class="anchor" href="#arrays-in-a-take" aria-label="Link to this section">#</a></h2>
+<p>T steps, N tools. Only <code>t</code> and <code>tool/pos</code> are always present.</p>
+<div class="table"><table><thead><tr><th scope="col">Array</th><th scope="col">Shape</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>t</code></td><td>(T,)</td><td>application time of each step [s] (for example simulated time)</td></tr><tr><td><code>t_wall</code></td><td>(T,)</td><td>wall-clock seconds since the take started</td></tr><tr><td><code>tool/pos</code></td><td>(T, N, 3)</td><td>measured tool positions [m], scene coordinates</td></tr><tr><td><code>tool/quat</code></td><td>(T, N, 4)</td><td>measured tool orientations, xyzw</td></tr><tr><td><code>tool/target_pos</code>, <code>tool/target_quat</code></td><td>(T, N, 3), (T, N, 4)</td><td>commanded tool poses</td></tr><tr><td><code>tool/opening</code></td><td>(T, N)</td><td>measured gripper opening [m]</td></tr><tr><td><code>tool/opening_cmd</code></td><td>(T, N)</td><td>commanded gripper opening [m]</td></tr><tr><td><code>tool/grip_state</code></td><td>(T, N) int8</td><td>0 open, 1 closing, 2 closed, 3 opening (given, or derived from the openings)</td></tr><tr><td><code>tool/state</code></td><td>(T, N) int8</td><td>0 idle, 1 following the hand, 2 lost (could not follow)</td></tr><tr><td><code>ctrl/pos</code>, <code>ctrl/quat</code></td><td>(T, N, 3), (T, N, 4)</td><td>the controllers in scene coordinates (NaN while not tracked)</td></tr><tr><td><code>ctrl/trigger</code>, <code>ctrl/squeeze</code></td><td>(T, N)</td><td>0..1</td></tr><tr><td><code>ctrl/buttons</code></td><td>(T, N) int32</td><td>button bits (see <a href="library.html#input">Input</a>)</td></tr><tr><td><code>extra/&lt;name&gt;</code></td><td>(T, ...)</td><td>your own per-step data</td></tr><tr><td><code>start/&lt;name&gt;</code></td><td>any</td><td>your state just before the first step</td></tr><tr><td><code>meta</code></td><td>string</td><td>JSON: tools, max_opening, rate_hz, session, take, started, up_axis</td></tr></tbody></table></div>
+<h2 id="loading-takes">Loading takes <a class="anchor" href="#loading-takes" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">import os
+from quest_teleop import load_take, take_summary
+from quest_teleop.recording import read_index
+
+root = os.path.expanduser("~/teleop_recordings")
+for entry in read_index(root):                       # every take listed in index.json
+    take = load_take(os.path.join(root, entry["file"]))
+    summary = take_summary(take)                     # per tool: path length, gripper closes / opens,
+                                                     # share of time closed / following, lost events
+    print(entry["session"], entry["take"], take["tool/pos"].shape, summary["tools"][0]["path_m"])</code></pre></div>
+<p><code>load_take(path, payload=False)</code> skips the <code>extra/</code> and <code>start/</code> arrays (which can be most of the file) and lists their names under <code>extra_keys</code>. The files are ordinary NumPy archives: <code>numpy.load(path)</code> reads them too.</p>
+<p>Next: <a href="status-page.html">Status page and trajectory viewer</a>.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="recording.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/recording.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="library.html"><span class="label">Previous</span>Use it with your own simulator</a><a class="pn next" href="status-page.html"><span class="label">Next</span>Status page and trajectory viewer</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

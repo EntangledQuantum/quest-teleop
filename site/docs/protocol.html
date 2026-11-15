@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quest-teleop protocol, version 1 · quest-teleop docs</title>
+<meta name="description" content="The wire format, version 1: TCP and UDP channels, discovery, session, datagrams, state delta scheme, TCP messages, panel.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/protocol.html">
+<link rel="alternate" type="text/markdown" href="protocol.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html" aria-current="page">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="quest-teleop-protocol-version-1">quest-teleop protocol, version 1</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#channels">Channels</a></li><li><a href="#finding-the-server">Finding the server</a></li><li><a href="#session">Session</a></li><li><a href="#frames-and-coordinate-spaces">Frames and coordinate spaces</a></li><li><a href="#datagrams">Datagrams</a></li><li><a href="#tcp-messages">TCP messages</a></li><li><a href="#cues-are-ordinary-nodes">Cues are ordinary nodes</a></li><li><a href="#size-of-the-traffic">Size of the traffic</a></li></ol></nav>
+<p>This page is <a href="https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/PROTOCOL.md"><code>docs/PROTOCOL.md</code></a> from the repository.</p>
+<p>Reference implementations: <code>server/quest_teleop/protocol.py</code> (Python) and <code>client/core/protocol.h</code> (C++). All integers and floats are little-endian. Positions are metres, quaternions are <code>x y z w</code>, strings are <code>u16 length</code> + UTF-8 bytes.</p>
+<h2 id="channels">Channels <a class="anchor" href="#channels" aria-label="Link to this section">#</a></h2>
+<div class="table"><table><thead><tr><th scope="col">Channel</th><th scope="col">Port</th><th scope="col">Carries</th></tr></thead><tbody><tr><td>TCP</td><td>47800 (server listens)</td><td>handshake, scene definition (meshes, nodes), text cues, bye</td></tr><tr><td>UDP</td><td>47800 (server), any (client)</td><td>controller input (client to server), state frames (server to client), discovery</td></tr><tr><td>UDP broadcast</td><td>47801</td><td>server beacons (optional way to find the server)</td></tr></tbody></table></div>
+<p>The reliable channel only carries things that are sent once. Everything that repeats every frame goes over UDP as absolute values, so a lost datagram never corrupts later frames and nothing is ever retransmitted late.</p>
+<p><strong>TCP-only mode.</strong> A client can set <code>HELLO.flags bit 0</code>; both sides then wrap their datagrams in <code>DGRAM</code> messages on the TCP connection. This is for links that only forward TCP, e.g. USB with <code>adb reverse tcp:47800 tcp:47800</code>.</p>
+<h2 id="finding-the-server">Finding the server <a class="anchor" href="#finding-the-server" aria-label="Link to this section">#</a></h2>
+<ol><li>The client broadcasts <code>DISCOVER</code> to <code>255.255.255.255:47800</code> once per second; the server answers <code>OFFER</code> to the sender's address.</li><li>The server also broadcasts <code>OFFER</code> to port 47801 once per second.</li><li>Or the client is given the address (headset: <code>adb shell am start ... --es server 192.168.1.20</code>).</li></ol>
+<h2 id="session">Session <a class="anchor" href="#session" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>client                                server
+  | -- TCP connect ------------------&gt; |
+  | -- HELLO ------------------------&gt; |
+  | &lt;------------------------ WELCOME  |   session id
+  | &lt;-- SCENE_BEGIN, MESH*, NODE*, SCENE_END   (full model, once)
+  | -- SCENE_READY ------------------&gt; |
+  | == INPUT (UDP, every display frame) =&gt; |   poses, buttons, ack of the newest complete state frame
+  | &lt;= STATE (UDP, every sim step) ======= |   what changed since the acked frame, haptics, latency echo
+  | &lt;-- TEXT (when a cue changes)      |</code></pre></div>
+<p>The server learns the client's UDP address from its first <code>INPUT</code> datagram (matched by session id). A new <code>SCENE_BEGIN</code> at any time replaces the scene.</p>
+<h2 id="frames-and-coordinate-spaces">Frames and coordinate spaces <a class="anchor" href="#frames-and-coordinate-spaces" aria-label="Link to this section">#</a></h2>
+<ul><li><strong>Scene space</strong>: the simulator's world frame. <code>SCENE_BEGIN</code> says which axis is up and gives the bounds.</li><li><strong>Stage space</strong>: the room (OpenXR <code>STAGE</code>: y up, origin on the floor).</li><li><strong>Placement</strong>: where the client draws the scene in the room; the user changes it in the app (move, turn, scale). <code>p_stage = place_pos + place_scale * rotate(place_quat, p_scene)</code>.</li></ul>
+<p>Controller poses in <code>INPUT</code> are in stage space, together with the current placement, so the server can convert them to scene space (<code>InputFrame.hand_in_scene</code>). A scene drawn at twice its size therefore halves the hand motion in simulator units.</p>
+<h2 id="datagrams">Datagrams <a class="anchor" href="#datagrams" aria-label="Link to this section">#</a></h2>
+<p>Header (8 bytes): <code>u16 magic = 0x5451 ("QT")</code>, <code>u8 version = 1</code>, <code>u8 type</code>, <code>u32 session</code>.</p>
+<div class="table"><table><thead><tr><th scope="col">Type</th><th scope="col">Name</th><th scope="col">Payload</th></tr></thead><tbody><tr><td>1</td><td>DISCOVER</td><td>none (session 0)</td></tr><tr><td>2</td><td>OFFER</td><td><code>u16 tcp_port</code>, <code>str server_name</code></td></tr><tr><td>3</td><td>INPUT</td><td>below (292 bytes with the header)</td></tr><tr><td>4</td><td>STATE</td><td>below (at most 1200 bytes with the header)</td></tr></tbody></table></div>
+<h3 id="input-client-to-server-every-display-frame">INPUT (client to server, every display frame) <a class="anchor" href="#input-client-to-server-every-display-frame" aria-label="Link to this section">#</a></h3>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>u32 seq                 u64 client_time_us          u32 ack_frame     u16 ack_scene
+u16 flags               bit0 edit mode (user is placing the scene: ignore the controls)
+                        bit1 session focused (headset worn)   bit2 passthrough on
+u32 latency_us          the client's last measured echo latency (0 = none yet)
+f32 place_pos[3]        f32 place_quat[4]           f32 place_scale
+f32 head_pos[3]         f32 head_quat[4]
+2 x hand (0 = left, 1 = right), 100 bytes each:
+    u16 flags           bit0 active  bit1 grip pose valid  bit2 aim pose valid  bit3 tracked
+    u16 buttons         bit0 primary (X / A)  bit1 secondary (Y / B)  bit2 thumbstick click  bit3 menu
+                        bit4 trigger touch  bit5 thumbstick touch  bit6 primary touch  bit7 secondary touch
+                        bit8 thumbrest touch
+    f32 trigger         f32 squeeze                 f32 stick[2]
+    f32 grip_pos[3]     f32 grip_quat[4]            f32 aim_pos[3]    f32 aim_quat[4]
+    f32 velocity[3]     f32 angular_velocity[3]     (grip, stage space)</code></pre></div>
+<p><code>ack_frame</code> is the newest state frame of scene <code>ack_scene</code> of which the client received every fragment before any fragment of a newer frame.</p>
+<h3 id="state-server-to-client-every-simulation-step">STATE (server to client, every simulation step) <a class="anchor" href="#state-server-to-client-every-simulation-step" aria-label="Link to this section">#</a></h3>
+<p>A frame is split into 1 to 255 datagrams. Each datagram is decodable alone.</p>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>u16 scene_id            u32 frame                   u8 frag_index     u8 frag_count
+u64 server_time_us
+u32 echo_input_seq      u64 echo_client_time_us     the INPUT sample this state results from
+u32 echo_hold_us        time between receiving that input and sending this frame (simulation + wait)
+2 x haptic (left, right): u16 seq, u8 amplitude (0..255), u8 reserved, u16 duration_ms, u16 frequency_hz
+chunks until the end of the datagram</code></pre></div>
+<p>Chunk header: <code>u8 type</code>, <code>u8 reserved</code>, <code>u16 node</code>.</p>
+<div class="table"><table><thead><tr><th scope="col">Type</th><th scope="col">Name</th><th scope="col">Body</th></tr></thead><tbody><tr><td>1</td><td>POSE</td><td><code>u16 pos[3]</code>, <code>i16 quat3[3]</code>, <code>i16 dropped</code></td></tr><tr><td>2</td><td>VERTS</td><td><code>u16 first</code>, <code>u16 count</code>, <code>count x u16[3]</code></td></tr><tr><td>3</td><td>APPEARANCE</td><td><code>u8 rgba[4]</code>, <code>u16 node_flags</code>, <code>u16 reserved</code></td></tr></tbody></table></div>
+<ul><li><strong>Position quantisation</strong>: <code>u16 = round((p - bounds_min) / (bounds_max - bounds_min) * 65535)</code> per axis. For nodes whose parent is the scene the bounds are the scene bounds (a 2 m scene gives 0.03 mm steps); for nodes attached to the head, a hand or the stage the bounds are -2 m .. +2 m.</li><li><strong>Rotation quantisation</strong> ("smallest three"): the quaternion is sign-flipped so that its largest-magnitude component is positive; that component's index (0..3 in xyzw order) is <code>dropped</code>; the other three, in xyzw order, are stored as <code>round(c * 32767 * sqrt(2))</code>. Error below 1e-4 rad.</li><li><strong>VERTS</strong> carries a run of a DEFORM node's vertices or a TUBE node's points.</li></ul>
+<p><strong>What a frame contains (the delta scheme).</strong> The server remembers, for every pose, every vertex and every appearance, the frame in which its quantised value last changed. A frame for a client contains every item that changed after the frame that client last acknowledged. So:</p>
+<ul><li>things that do not move cost nothing;</li><li>a lost datagram is repaired by the next frame automatically (the ack does not advance, so the items are sent again with their current values), without retransmission timers;</li><li>values are always absolute, never differences, so there is no error accumulation and no dependency chain.</li></ul>
+<p>A client drops datagrams of frames older than the newest frame it has seen, and applies everything else immediately (also from incomplete frames).</p>
+<p><strong>Haptics.</strong> The haptic fields are state, not events: they travel in every datagram. The client plays a vibration when <code>seq</code> differs from the last one it played. Amplitude 0 stops the vibration. Quest 2 controllers ignore the frequency.</p>
+<p><strong>Latency echo.</strong> <code>now - echo_client_time_us</code> on the client is the time from sampling the controllers to having the resulting simulator state in hand; the client reports it back in <code>INPUT.latency_us</code>. It excludes the display's own scan-out (about one refresh).</p>
+<h2 id="tcp-messages">TCP messages <a class="anchor" href="#tcp-messages" aria-label="Link to this section">#</a></h2>
+<p>Framing: <code>u32 length</code>, <code>u16 type</code>, payload; <code>length</code> counts the type and the payload.</p>
+<div class="table"><table><thead><tr><th scope="col">Type</th><th scope="col">Name</th><th scope="col">Direction</th><th scope="col">Payload</th></tr></thead><tbody><tr><td>1</td><td>HELLO</td><td>C to S</td><td><code>u16 magic</code>, <code>u16 version</code>, <code>u16 flags</code> (bit0 TCP only), <code>f32 display_hz</code>, <code>str client_name</code>, <code>str device</code></td></tr><tr><td>2</td><td>WELCOME</td><td>S to C</td><td><code>u16 version</code>, <code>u16 flags</code>, <code>u32 session</code>, <code>u16 udp_port</code>, <code>f32 state_hz</code>, <code>str server_name</code></td></tr><tr><td>3</td><td>SCENE_BEGIN</td><td>S to C</td><td><code>u16 scene_id</code>, <code>u8 up_axis</code> (0 x, 1 y, 2 z), <code>u8 reserved</code>, <code>f32 bounds_min[3]</code>, <code>f32 bounds_max[3]</code>, <code>f32 focus_center[3]</code>, <code>f32 focus_radius</code>, <code>f32 view_dir[3]</code>, <code>u16 mesh_count</code>, <code>u16 node_count</code>, <code>str name</code></td></tr><tr><td>4</td><td>MESH</td><td>S to C</td><td>below</td></tr><tr><td>5</td><td>NODE</td><td>S to C</td><td>below</td></tr><tr><td>6</td><td>SCENE_END</td><td>S to C</td><td><code>u16 scene_id</code></td></tr><tr><td>7</td><td>SCENE_READY</td><td>C to S</td><td><code>u16 scene_id</code></td></tr><tr><td>8</td><td>TEXT</td><td>S to C</td><td><code>u8 slot</code>, <code>u8 anchor</code>, <code>u16 reserved</code>, <code>u8 rgba[4]</code>, <code>f32 size</code>, <code>f32 pos[3]</code>, <code>u32 ttl_ms</code>, <code>str text</code></td></tr><tr><td>9</td><td>DGRAM</td><td>both</td><td>one datagram including its header (TCP-only mode)</td></tr><tr><td>10</td><td>PING</td><td>C to S</td><td><code>u64 t</code></td></tr><tr><td>11</td><td>PONG</td><td>S to C</td><td><code>u64 t</code> (echo), <code>u64 server_time_us</code></td></tr><tr><td>12</td><td>BYE</td><td>both</td><td><code>str reason</code> (optional)</td></tr><tr><td>13</td><td>PANEL</td><td>S to C</td><td>below</td></tr><tr><td>14</td><td>ACTION</td><td>C to S</td><td><code>u16 action_id</code>: the operator pressed that action's button</td></tr></tbody></table></div>
+<p><code>focus_center</code> / <code>focus_radius</code> describe the region the operator works in; the client uses them for the first placement (the region is put in front of the user at a comfortable size). <code>view_dir</code> is the horizontal direction, in scene coordinates, the operator should look along at the start (zero: no preference).</p>
+<h3 id="mesh">MESH <a class="anchor" href="#mesh" aria-label="Link to this section">#</a></h3>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>u16 mesh_id             u16 flags       bit0 normals  bit1 vertex colours  bit2 32-bit indices  bit3 double sided
+u32 vertex_count        u32 index_count
+f32 aabb_min[3]         f32 aabb_max[3]
+u32 raw_size
+zlib-deflated block of raw_size bytes:
+    u16 position[3] x vertex_count          quantised inside the AABB
+    i8  normal[4]   x vertex_count          if bit0 (xyz * 127, 4th byte unused)
+    u8  rgba[4]     x vertex_count          if bit1
+    u16 or u32 index x index_count          triangles</code></pre></div>
+<p>Without normals the client shades with the triangle normals.</p>
+<h3 id="node">NODE <a class="anchor" href="#node" aria-label="Link to this section">#</a></h3>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>u16 node_id             u8 kind         1 MESH (rigid)  2 DEFORM (streamed vertices)  3 TUBE (streamed polyline)
+u8 parent               0 scene  1 stage  2 head  3 left grip  4 right grip  5 left aim  6 right aim
+u16 mesh_id (0xFFFF none)
+u16 flags               bit0 visible  bit1 blend (use alpha)  bit2 unlit  bit3 on top (no depth test)  bit4 flat
+                        bit5 highlight (accent rim)
+u8 rgba[4]              multiplies the mesh colours
+f32 pos[3]              f32 quat[4]     f32 scale[3]
+f32 param               TUBE: radius
+u16 point_count         TUBE: number of points, followed by f32[3] x point_count
+str name</code></pre></div>
+<p>Node ids are dense, 0 .. node_count - 1, and messages arrive in id order. Nodes attached to a hand or the head move with it on the client without any network delay: use them for cues that must stick to the controller.</p>
+<h3 id="text">TEXT <a class="anchor" href="#text" aria-label="Link to this section">#</a></h3>
+<p><code>anchor</code> 0: head-locked panel 1 m in front of the eyes, <code>pos</code> is the offset on it. <code>anchor</code> 1 + parent: at <code>pos</code> in that frame, turned toward the viewer. <code>size</code> is the line height in metres. <code>ttl_ms</code> 0: until the slot is replaced; an empty string clears the slot. Lines are separated by <code>\n</code>.</p>
+<h3 id="panel">PANEL <a class="anchor" href="#panel" aria-label="Link to this section">#</a></h3>
+<p>The server's control panel: what is running, its state, and the actions the operator can trigger. The client lays it out in its own style (a card on the wrist, a menu) and answers with ACTION. Send it again whenever it changes.</p>
+<div class="code"><pre tabindex="0" aria-label="text code"><code>str title               str subtitle            str host ("computer name  address")
+u8 status_style         0 none  1 recording  2 caution  3 ok          str status_text
+u8 row_count, each:     u8 style (0 normal, 1 accent, 2 caution, 3 failure; bit 7: also on the wrist card),
+                        str label, str value
+u8 action_count, each:  u16 id, u8 style (0 normal, 1 primary, 2 danger),
+                        u8 flags (bit 0 enabled, bit 1 hold to confirm, bit 2 active), str label, str hint
+u8 legend_count, each:  str key, str text</code></pre></div>
+<p>Role tokens in any of these strings are replaced by the client, so the text stays right when the user swaps hands in the settings: <code>$R</code> / <code>$L</code> = "Right" / "Left" (the controller in that role), <code>$Rp</code> <code>$Rs</code> <code>$Lp</code> <code>$Ls</code> = that controller's primary / secondary button (A, B, X, Y). With "left-handed" on, the client also swaps the two hands in INPUT and the two haptic channels, so the server needs no special handling.</p>
+<p>Node flag bit 5 (<code>F_HIGHLIGHT</code>, 32) draws a node with an accent rim (e.g. the tool that is following the hand).</p>
+<h2 id="cues-are-ordinary-nodes">Cues are ordinary nodes <a class="anchor" href="#cues-are-ordinary-nodes" aria-label="Link to this section">#</a></h2>
+<p>The protocol has no special cue messages. The "go back to the robot" cue (<code>server/quest_teleop/cues.py</code>) is three nodes that the server shows and hides (a see-through shell at the robot's real tool pose, a marker at the pose the hand asks for, a line between them) plus one TEXT. Any other cue can be built the same way.</p>
+<h2 id="size-of-the-traffic">Size of the traffic <a class="anchor" href="#size-of-the-traffic" aria-label="Link to this section">#</a></h2>
+<ul><li>INPUT: 292 bytes x display rate (72 Hz: 168 kbit/s).</li><li>STATE: 56 bytes of headers per datagram, 18 bytes per moving rigid body, 6 bytes per moving vertex or tube point, 8 extra bytes per run of vertices.</li></ul>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="protocol.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/protocol.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="status-page.html"><span class="label">Previous</span>Status page and trajectory viewer</a><a class="pn next" href="measurements.html"><span class="label">Next</span>Measurements</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measurements · quest-teleop docs</title>
+<meta name="description" content="Latency and bandwidth on loopback and on a Quest 2, over USB and Wi-Fi.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/measurements.html">
+<link rel="alternate" type="text/markdown" href="measurements.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html" aria-current="page">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="measurements">Measurements</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#loopback-bundled-demo-no-headset">Loopback, bundled demo (no headset)</a></li><li><a href="#loopback-a-larger-scene">Loopback, a larger scene</a></li><li><a href="#quest-2">Quest 2</a></li></ol></nav>
+<p>This page is <a href="https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/MEASUREMENTS.md"><code>docs/MEASUREMENTS.md</code></a> from the repository.</p>
+<p>"Latency" is the protocol's echo latency: from the moment the client samples the controllers to the moment it holds the simulator state that resulted from that sample. The client measures it and reports it back every frame; the status page splits it into its parts. It includes the wait for the next simulation step and the step itself, and excludes the display's own scan-out (about one refresh, 13.9 ms at 72 Hz).</p>
+<h2 id="loopback-bundled-demo-no-headset">Loopback, bundled demo (no headset) <a class="anchor" href="#loopback-bundled-demo-no-headset" aria-label="Link to this section">#</a></h2>
+<p><code>quest_teleop.probe</code> against <code>quest_teleop.demo</code>. Scene: 17 nodes, 7 meshes, one 196-vertex cloth, one 40-point rope. Definition: 10 kB, loaded in 1 ms. Client input at 72 Hz.</p>
+<div class="table"><table><thead><tr><th scope="col">Case</th><th scope="col">State rate</th><th scope="col">Down</th><th scope="col">Up</th><th scope="col">Datagrams / frame</th><th scope="col">Latency median / p95 / max</th><th scope="col">Server hold median</th></tr></thead><tbody><tr><td>right hand moving, UDP</td><td>60 Hz</td><td>0.23 Mbit/s</td><td>168 kbit/s</td><td>1.07</td><td>8.4 / 14.6 / 14.9 ms</td><td>8.2 ms</td></tr><tr><td>cloth and rope settling, hands still</td><td>60 Hz</td><td>0.32 Mbit/s</td><td>168 kbit/s</td><td>1.01</td><td>8.4 / 14.7 / 15.3 ms</td><td>8.3 ms</td></tr><tr><td>right hand moving, UDP</td><td>120 Hz</td><td>0.28 Mbit/s</td><td>168 kbit/s</td><td>1.00</td><td>8.0 / 12.6 / 13.4 ms</td><td>7.9 ms</td></tr><tr><td>right hand moving, TCP-only mode</td><td>60 Hz</td><td>0.35 Mbit/s</td><td>168 kbit/s</td><td>1.12</td><td>6.4 / 12.6 / 16.2 ms</td><td>6.2 ms</td></tr></tbody></table></div>
+<p>No frame was lost in any run. Almost all of the latency is the server hold: an input waits on average half a simulation period for the next step, plus the step time. The network and the encoding add about 0.1 ms on loopback. With 30 % of the state datagrams dropped on purpose the client's state still converges to the server's, without retransmission (<code>tests/test_loopback.py</code>).</p>
+<h2 id="loopback-a-larger-scene">Loopback, a larger scene <a class="anchor" href="#loopback-a-larger-scene" aria-label="Link to this section">#</a></h2>
+<p>A robot arm with a gripper, rigid parts, two deformable meshes and a 268-node rope from a GPU physics simulator: 40 nodes, 33 meshes, 81,901 triangles, 2,051 streamed points.</p>
+<div class="table"><table><tbody><tr><th>Scene definition</th><td>689 kB on the wire, decoded by the Python probe in 5 ms</td></tr><tr><th>State frame while things move</th><td>3.6 kB in 3.7 datagrams (1.5 Mbit/s at 50 Hz), with a 0.05 mm vertex dead band</td></tr><tr><th>Server cost per frame (quantise, diff, encode, send) plus the application's own logic</th><td>0.8 ms median</td></tr></tbody></table></div>
+<h2 id="quest-2">Quest 2 <a class="anchor" href="#quest-2" aria-label="Link to this section">#</a></h2>
+<p>Quest 2, system software v209 (Android 14), 72 Hz, passthrough on. The headset app ran on the first install: OpenXR session, 1440 x 1584 sRGB swapchains with 4x MSAA, Touch controller bindings, passthrough layer; 72 / 72 frames per second with no stale frames, application GPU time 6.4 ms (before shadows were added; not re-measured since).</p>
+<div class="table"><table><thead><tr><th scope="col">Scene</th><th scope="col">Link</th><th scope="col">Latency median / p95 / max</th><th scope="col">Down</th><th scope="col">Up</th></tr></thead><tbody><tr><td>demo, 60 Hz</td><td>USB (<code>adb reverse</code>, TCP tunnel)</td><td>13.9 / 27.9 / 28.2 ms</td><td>0.35-0.6 Mbit/s moving</td><td>168 kbit/s</td></tr><tr><td>demo, 60 Hz</td><td>Wi-Fi (UDP), computer also on Wi-Fi</td><td>14.1 / 28.2 / 30-42 ms</td><td>same</td><td>168 kbit/s</td></tr><tr><td>larger scene, simulator at about half real time (26 steps/s)</td><td>USB</td><td>56 / 56-70 ms</td><td>0.1-0.6 Mbit/s</td><td>168 kbit/s</td></tr><tr><td>larger scene, same</td><td>Wi-Fi (UDP)</td><td>56 / 69 ms</td><td>0.1 Mbit/s idle</td><td>168 kbit/s</td></tr></tbody></table></div>
+<p>Latency on the headset is quantised to display frames (13.9 ms). With a slow simulator the latency is the simulator step plus one to two display frames. Wi-Fi costs nothing at the median; now and then a frame arrives one or two display frames late.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="measurements.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/measurements.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="protocol.html"><span class="label">Previous</span>Protocol</a><a class="pn next" href="troubleshooting.html"><span class="label">Next</span>Troubleshooting</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

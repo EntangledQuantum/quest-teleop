@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quest-teleop: VR teleoperation for Meta Quest 2</title>
+<meta name="description" content="Teleoperate any simulator or robot from a Meta Quest 2: a native OpenXR headset app and a pip-installable Python library that streams your 3D scene, receives the controllers, records takes and serves a local status page.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/">
+<link rel="help" href="llms.txt" type="text/plain" title="llms.txt: documentation index for AI agents">
+<link rel="alternate" type="text/markdown" href="docs/index.md" title="Documentation index as Markdown">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<meta property="og:title" content="quest-teleop">
+<meta property="og:description" content="VR teleoperation for Meta Quest 2 without a game engine: native OpenXR app, Python server library, haptics, recording, status page.">
+<meta property="og:image" content="https://entangledquantum.github.io/quest-teleop/assets/img/headset_menu.png">
+<meta property="og:url" content="https://entangledquantum.github.io/quest-teleop/">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<main id="main">
+  <div class="wrap">
+    <header class="hero">
+      <p class="label marker">Open source &middot; MIT &middot; version 0.2.0</p>
+      <h1 class="page-title">quest-teleop</h1>
+      <p class="page-desc">Teleoperate any simulator or robot from a Meta Quest 2: a small native headset app shows your 3D scene in the room and sends both controllers back to a Python library on your computer. No game engine.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/EntangledQuantum/quest-teleop">View on GitHub <span class="hint" aria-hidden="true">Source</span></a>
+        <a class="btn secondary" href="docs/index.html">Read the docs <span class="hint" aria-hidden="true">11 pages</span></a>
+      </div>
+    </header>
+  </div>
+  <div class="edge" role="presentation"></div>
+
+  <div class="wrap">
+    <section class="block agent" aria-labelledby="agent-title">
+      <div class="block-head">
+        <p class="label marker">For your coding agent</p>
+        <h2 class="section-title" id="agent-title">Let your agent set it up</h2>
+        <p class="section-desc">Paste this one line into your AI coding agent. It reads the docs index, then installs the library, builds the headset app and walks you through the Quest 2 steps that need your hands.</p>
+      </div>
+      <div class="oneliner">
+        <code id="oneliner">Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install quest-teleop, set up my Quest 2, and show me how to use it.</code>
+        <button class="copy" type="button" id="copy" hidden>Copy</button>
+      </div>
+      <p class="sr" id="copy-status" role="status" aria-live="polite"></p>
+      <ul class="agent-links" aria-label="Files for agents">
+        <li><a href="llms.txt">llms.txt</a></li>
+        <li><a href="llms-full.txt">llms-full.txt</a></li>
+        <li><a href="docs/index.md">every page as Markdown</a></li>
+      </ul>
+    </section>
+
+    <section class="block" aria-labelledby="parts-title">
+      <div class="block-head">
+        <p class="label marker">What is in it</p>
+        <h2 class="section-title" id="parts-title">Four parts, one protocol</h2>
+      </div>
+      <ul class="facts">
+        <li><strong>Native headset app</strong><span>OpenXR and OpenGL ES 3 in C++. About 1 MB, built by two scripts: no game engine, no Gradle, no Java.</span></li>
+        <li><strong>Python server library</strong><span><code>pip install</code>, numpy only. Streams meshes, deforming meshes and ropes; returns poses and buttons.</span></li>
+        <li><strong>About 14 ms latency</strong><span>Median from controller sample to simulator state on a Quest 2 at 72 Hz, over USB or Wi-Fi.</span></li>
+        <li><strong>Desktop client and demo</strong><span>Try a server without a headset: the same renderer in a window, driven by mouse and keyboard.</span></li>
+      </ul>
+    </section>
+
+    <section class="block" aria-labelledby="features-title">
+      <div class="block-head">
+        <p class="label marker">Highlights</p>
+        <h2 class="section-title" id="features-title">What you see</h2>
+        <p class="section-desc">Real screenshots from the bundled demo. The headset views are drawn by the desktop client, which shares its renderer and interface code with the headset app.</p>
+      </div>
+      <ul class="shots">
+        <li>
+          <figure>
+            <div class="frame"><img src="assets/img/headset_menu.png" width="1500" height="1150" alt="The headset menu in the demo. Left column: the title Pick and place demo, the status Ready to record, and rows for the connection and the session. Right column: the buttons Start recording, Reset the scene and Delete the last take, the control legend, and settings such as Larger text, Left-handed, Shadows and Scene size. The demo table with two grippers is below."></div>
+            <figcaption>
+              <h3>In-headset panel</h3>
+              <p>Your rows, your actions as buttons, the control legend and settings, laid out by the headset. Dangerous actions need the trigger held.</p>
+            </figcaption>
+          </figure>
+        </li>
+        <li>
+          <figure>
+            <div class="frame"><img src="assets/img/headset_wrist_card.png" width="1500" height="1150" loading="lazy" alt="The wrist card floating above the controller, showing REC 00:02 take 2 in orange, the run name, takes saved, and a network latency of 16 ms, over the demo table with a striped cloth, a rope and a cube."></div>
+            <figcaption>
+              <h3>Take recording</h3>
+              <p>One button starts and stops a take. Each take is one file with tool poses, grippers, controllers and any data of your own.</p>
+            </figcaption>
+          </figure>
+        </li>
+        <li>
+          <figure>
+            <div class="frame"><img src="assets/img/headset_go_back_cue.png" width="1500" height="1150" loading="lazy" alt="The go-back cue: a yellow see-through sphere where the gripper really is, a yellow line to a marker where the hand asks it to be, and the text Robot cannot follow. Move your hand back to the highlighted tool."></div>
+            <figcaption>
+              <h3>Haptics and a go-back cue</h3>
+              <p>Contact becomes vibration. When the robot cannot follow your hand, it holds, and the headset shows where the tool really is.</p>
+            </figcaption>
+          </figure>
+        </li>
+        <li>
+          <figure>
+            <div class="frame"><img src="assets/img/status_page.png" width="1500" height="2150" loading="lazy" alt="The top of the local status page: the title Quest Teleop demo, a state strip reading Server running, Headset connected by Wi-Fi, Session running and REC take 2, then the Connection and Session tables."></div>
+            <figcaption>
+              <h3>Local status page</h3>
+              <p>Connection, simulator and network speeds, latency split into its parts, and every recorded take. Standard library only, nothing loaded from the internet.</p>
+            </figcaption>
+          </figure>
+        </li>
+        <li>
+          <figure>
+            <div class="frame"><img src="assets/img/trajectory_page.png" width="1500" height="1640" loading="lazy" alt="The trajectory view of take 1: a 3D plot of the left and right tool paths with start and end labels and gripper-state markers along them, next to a table of the take's properties."></div>
+            <figcaption>
+              <h3>Trajectory viewer</h3>
+              <p>Each tool's path in 3D with the gripper state marked along it. Turn, zoom, play and scrub through a take.</p>
+            </figcaption>
+          </figure>
+        </li>
+      </ul>
+    </section>
+  </div>
+</main>
+<footer class="site-foot">
+  <p>quest-teleop is MIT licensed. Fonts: Host Grotesk and Martian Mono, <a href="assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. Meta Quest is a trademark of Meta Platforms; this project is not affiliated with Meta. No tracking, no cookies.</p>
+</footer>
+<script>
+(function () {
+  var btn = document.getElementById("copy"), code = document.getElementById("oneliner"), status = document.getElementById("copy-status");
+  if (!btn || !code) return;
+  btn.hidden = false;
+  btn.setAttribute("aria-label", "Copy the one-line prompt");
+  function done(ok) {
+    btn.textContent = ok ? "Copied" : "Select";
+    status.textContent = ok ? "Prompt copied to the clipboard." : "Copy failed: the prompt is selected, press Control or Command and C.";
+    setTimeout(function () { btn.textContent = "Copy"; }, 2000);
+  }
+  function selectText() {
+    var r = document.createRange(); r.selectNodeContents(code);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  btn.addEventListener("click", function () {
+    var text = code.textContent.trim();
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { selectText(); done(false); });
+    } else {
+      selectText();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      done(ok);
+    }
+  });
+})();
+</script>
+</body>
+</html>

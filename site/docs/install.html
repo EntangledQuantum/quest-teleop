@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install · quest-teleop docs</title>
+<meta name="description" content="Install the Python library with pip; install the Android toolchain, build the APK and install it on the headset; build the desktop client; run the tests.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/install.html">
+<link rel="alternate" type="text/markdown" href="install.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html" aria-current="page">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="install">Install</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#requirements">Requirements</a></li><li><a href="#1-the-python-library">1. The Python library</a></li><li><a href="#2-the-headset-app">2. The headset app</a></li><li><a href="#3-the-desktop-client-optional">3. The desktop client (optional)</a></li><li><a href="#4-run-the-tests-optional">4. Run the tests (optional)</a></li><li><a href="#uninstall">Uninstall</a></li></ol></nav>
+<p>There are up to three things to install: the Python library (always), the headset app (once per headset), and the desktop client (optional, for trying a server without a headset).</p>
+<h2 id="requirements">Requirements <a class="anchor" href="#requirements" aria-label="Link to this section">#</a></h2>
+<div class="table"><table><thead><tr><th scope="col">What</th><th scope="col">Needed for</th></tr></thead><tbody><tr><td>Python 3.10 or newer, pip</td><td>the library, the demo, the probe</td></tr><tr><td>numpy</td><td>the library (installed automatically)</td></tr><tr><td>git</td><td>cloning the repository to build the headset app or the desktop client</td></tr><tr><td>Linux on x86-64</td><td>the build scripts (<code>android/setup_toolchain.sh</code> downloads the Linux Android tools)</td></tr><tr><td>cmake 3.18 or newer, make, curl, unzip, zip</td><td>building the APK</td></tr><tr><td>a Java runtime, version 17 or newer</td><td><code>sdkmanager</code>, <code>apksigner</code> and <code>keytool</code> while building the APK</td></tr><tr><td>about 2.5 GB of disk</td><td>the Android SDK tools, the NDK and the OpenXR loader</td></tr><tr><td>a USB-C data cable</td><td>installing the app on the headset</td></tr></tbody></table></div>
+<p>On Debian or Ubuntu, for example:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">sudo apt install git python3-pip cmake make curl unzip zip openjdk-17-jdk-headless</code></pre></div>
+<h2 id="1-the-python-library">1. The Python library <a class="anchor" href="#1-the-python-library" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">pip install git+https://github.com/EntangledQuantum/quest-teleop</code></pre></div>
+<p>Or from a clone:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">git clone https://github.com/EntangledQuantum/quest-teleop.git
+cd quest-teleop
+pip install .            # or: pip install -e .   (editable, for working on the library)</code></pre></div>
+<p>This installs the <code>quest_teleop</code> package (its only dependency is numpy) and two commands:</p>
+<div class="table"><table><thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead><tbody><tr><td><code>quest-teleop-demo</code></td><td>the bundled demo server with a mock world, the status page and recording (<a href="quick-start.html">Quick start</a>)</td></tr><tr><td><code>quest-teleop-probe</code></td><td>a headless Python client: checks a server and measures latency and bandwidth</td></tr></tbody></table></div>
+<p>Check it:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">python -c "import quest_teleop; print(quest_teleop.__version__)"     # 0.2.0
+quest-teleop-demo --help</code></pre></div>
+<h2 id="2-the-headset-app">2. The headset app <a class="anchor" href="#2-the-headset-app" aria-label="Link to this section">#</a></h2>
+<p>The app is built from the repository with two scripts. No Android Studio, no Gradle, no Java sources: NDK clang through CMake builds one shared library, then <code>aapt2</code>, <code>zip</code>, <code>zipalign</code> and <code>apksigner</code> package and sign it with a debug key.</p>
+<h3 id="21-install-the-android-toolchain-once">2.1 Install the Android toolchain (once) <a class="anchor" href="#21-install-the-android-toolchain-once" aria-label="Link to this section">#</a></h3>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">git clone https://github.com/EntangledQuantum/quest-teleop.git     # if you have not cloned it yet
+cd quest-teleop
+android/setup_toolchain.sh</code></pre></div>
+<p>It installs into <code>~/android-sdk</code> (set <code>ANDROID_HOME</code> to choose another folder), about 2.4 GB:</p>
+<div class="table"><table><thead><tr><th scope="col">Component</th><th scope="col">Version</th></tr></thead><tbody><tr><td>Android command-line tools</td><td>11076708</td></tr><tr><td>platform-tools (<code>adb</code>)</td><td>latest</td></tr><tr><td>build-tools (<code>aapt2</code>, <code>zipalign</code>, <code>apksigner</code>)</td><td>34.0.0</td></tr><tr><td>platform (<code>android.jar</code>)</td><td>android-32 (Quest 2 runs Android 12L)</td></tr><tr><td>NDK</td><td>27.2.12479018 (r27c)</td></tr><tr><td>Khronos OpenXR loader for Android</td><td>1.1.65</td></tr></tbody></table></div>
+<p>It downloads only from <code>dl.google.com</code> and <code>github.com/KhronosGroup</code>. <strong>Running it accepts the Android SDK licence agreements</strong> (<code>sdkmanager --licenses</code>); an agent should tell the user this before running it. Running it again is safe: finished parts are skipped.</p>
+<p>At the end it prints where <code>adb</code> is: <code>~/android-sdk/platform-tools/adb</code>. The other pages write plain <code>adb</code>; either put that folder on your <code>PATH</code> or use the full path:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">export PATH="$HOME/android-sdk/platform-tools:$PATH"</code></pre></div>
+<h3 id="22-build-the-apk">2.2 Build the APK <a class="anchor" href="#22-build-the-apk" aria-label="Link to this section">#</a></h3>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">android/build_apk.sh            # builds build/quest-teleop.apk (about 1 MB)</code></pre></div>
+<p>The APK is signed with the standard Android debug key in <code>~/.android/debug.keystore</code> (created with <code>keytool</code> if it is missing). That is all a sideloaded developer build needs.</p>
+<h3 id="23-install-it-on-the-headset">2.3 Install it on the headset <a class="anchor" href="#23-install-it-on-the-headset" aria-label="Link to this section">#</a></h3>
+<p>The headset must be in developer mode, connected by USB, and listed by <code>adb devices</code> as <code>device</code>: see <a href="quest-setup.html">Quest 2 setup</a> first. Then:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">android/build_apk.sh install    # builds, runs `adb install -r build/quest-teleop.apk`, and starts the app</code></pre></div>
+<p>To start the app with a fixed server address instead of finding the server by itself:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">SERVER=192.168.1.20 android/build_apk.sh install</code></pre></div>
+<p>An APK that is already built installs with plain adb:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">adb install -r build/quest-teleop.apk</code></pre></div>
+<p>In the headset the app is under <strong>Library</strong>, filter <strong>Unknown sources</strong>, as <strong>Quest Teleop</strong>. Its package name is <code>com.entangledquantum.questteleop</code>.</p>
+<h2 id="3-the-desktop-client-optional">3. The desktop client (optional) <a class="anchor" href="#3-the-desktop-client-optional" aria-label="Link to this section">#</a></h2>
+<p>The same C++ core as the headset app, in an X11 window. Needs a C++17 compiler and the X11, EGL, OpenGL ES and zlib development files:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">sudo apt install g++ cmake make libx11-dev libegl-dev libgles-dev zlib1g-dev     # Debian / Ubuntu
+cmake -S client -B build/desktop &amp;&amp; cmake --build build/desktop -j
+build/desktop/qt_desktop                     # finds the server by broadcast
+build/desktop/qt_desktop --server 127.0.0.1  # or: a given address, HOST[:PORT]</code></pre></div>
+<p>Options: <code>--server HOST[:PORT]</code>, <code>--tcp-only</code> (tunnel everything through TCP), <code>--size WxH</code>. The controls are on the <a href="quick-start.html#4-desktop-client-controls">Quick start</a> page.</p>
+<h2 id="4-run-the-tests-optional">4. Run the tests (optional) <a class="anchor" href="#4-run-the-tests-optional" aria-label="Link to this section">#</a></h2>
+<p>In a clone:</p>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">pip install pytest
+python -m pytest -q</code></pre></div>
+<p>They cover protocol round trips, the server and the probe over loopback, recovery from packet loss, recording and the status page.</p>
+<h2 id="uninstall">Uninstall <a class="anchor" href="#uninstall" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="bash code"><code class="language-bash">pip uninstall quest-teleop
+adb uninstall com.entangledquantum.questteleop</code></pre></div>
+<p>The toolchain is the folder <code>~/android-sdk</code> (or your <code>ANDROID_HOME</code>); delete it by hand only if nothing else uses it.</p>
+<p>Next: <a href="quest-setup.html">Quest 2 setup</a>.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="install.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/install.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="index.html"><span class="label">Previous</span>Overview</a><a class="pn next" href="quest-setup.html"><span class="label">Next</span>Quest 2 setup</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

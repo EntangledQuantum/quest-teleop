@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quest-teleop docs</title>
+<meta name="description" content="What quest-teleop is, its parts, and the order to read these pages in.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/index.html">
+<link rel="alternate" type="text/markdown" href="index.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html" aria-current="page">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html" aria-current="page">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="quest-teleop-documentation">quest-teleop documentation</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#pages">Pages</a></li><li><a href="#for-ai-agents">For AI agents</a></li><li><a href="#source">Source</a></li></ol></nav>
+<p>quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest 2 (or a later Quest) without a game engine. It has four parts:</p>
+<ul><li><strong>Headset app</strong> (<code>client/quest</code>): native OpenXR + OpenGL ES 3 in C++, one <code>NativeActivity</code>, no Java, no Gradle. It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every display frame, plays vibration, and shows the server's cues, status and buttons.</li><li><strong>Python library</strong> (<code>quest_teleop</code>, numpy only): stream any 3D scene, read the controllers, send haptics and text cues, show a control panel with your own actions, map a hand to a robot tool safely, record takes, and serve a local status page.</li><li><strong>Desktop client</strong> (<code>client/desktop</code>): the same C++ core in a window, driven by mouse and keyboard, to try a server without a headset.</li><li><strong>Demo</strong> (<code>quest-teleop-demo</code>): two grippers, a cube, a rope and a cloth, using every feature above.</li></ul>
+<h2 id="pages">Pages <a class="anchor" href="#pages" aria-label="Link to this section">#</a></h2>
+<p>Read them in this order the first time.</p>
+<ol><li><a href="install.html">Install</a>: the Python library with pip; the Android toolchain, building and installing the APK; the desktop client.</li><li><a href="quest-setup.html">Quest 2 setup</a>: developer mode, USB debugging, the udev rule on Linux, firewall ports, USB link with <code>adb reverse</code>.</li><li><a href="quick-start.html">Quick start</a>: run the demo, connect the headset or the desktop client, the controls.</li><li><a href="library.html">Use it with your own simulator</a>: the server API, streaming a scene, input, haptics, cues, the panel and actions, safe hand-to-tool mapping.</li><li><a href="recording.html">Recording takes</a>: <code>TakeRecorder</code>, the file layout, the arrays, loading takes.</li><li><a href="status-page.html">Status page and trajectory viewer</a>: the local web page, its data callback and endpoints.</li><li><a href="protocol.html">Protocol</a>: the wire format, for writing another client or server.</li><li><a href="measurements.html">Measurements</a>: latency and bandwidth on loopback and on a Quest 2.</li><li><a href="troubleshooting.html">Troubleshooting</a>: the headset does not appear in adb, the app does not find the server, and other problems.</li><li><a href="faq.html">FAQ</a>.</li></ol>
+<h2 id="for-ai-agents">For AI agents <a class="anchor" href="#for-ai-agents" aria-label="Link to this section">#</a></h2>
+<p>Every page is published twice: as HTML (<code>install.html</code>) and as plain Markdown (<code>install.md</code>) at the same path. <a href="../llms.txt"><code>/llms.txt</code></a> lists all pages with their Markdown links, and <a href="../llms-full.txt"><code>/llms-full.txt</code></a> has the whole documentation in one file. Steps that need a person (putting on the headset, tapping "Allow", enabling developer mode in the phone app) or root (udev rule, firewall) are marked as such in the pages.</p>
+<h2 id="source">Source <a class="anchor" href="#source" aria-label="Link to this section">#</a></h2>
+<p><a href="https://github.com/EntangledQuantum/quest-teleop">https://github.com/EntangledQuantum/quest-teleop</a>, MIT licence. These pages document version 0.2.0.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="index.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/index.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn next" href="install.html"><span class="label">Next</span>Install</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

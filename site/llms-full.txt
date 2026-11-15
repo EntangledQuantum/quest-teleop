@@ -1,0 +1,1499 @@
+# quest-teleop
+
+> Generic VR teleoperation for the Meta Quest 2: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
+> no Gradle) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
+> both controllers every display frame, sends haptics and text cues, shows an in-headset panel with your own
+> actions, records takes, and serves a local status page with a trajectory viewer. Includes a desktop test client
+> and a demo.
+
+- Repository: https://github.com/EntangledQuantum/quest-teleop (MIT licence), version 0.2.0
+- Install the library: `pip install git+https://github.com/EntangledQuantum/quest-teleop` (Python 3.10+). Commands: `quest-teleop-demo`, `quest-teleop-probe`
+- Build and install the headset app (Linux, from a clone): `android/setup_toolchain.sh` then `android/build_apk.sh install`
+- Network: TCP 47800 and UDP 47800-47801 open on the computer, or `adb reverse tcp:47800 tcp:47800` over USB
+- Status page: http://localhost:8800 while the demo or your server runs
+- Every page below is plain Markdown; the same page as HTML is at the same path with `.html`
+
+This file contains every documentation page, in reading order. The index is https://entangledquantum.github.io/quest-teleop/llms.txt.
+
+## Instructions for agents
+
+Setting up quest-teleop for a user, in order:
+
+1. Install the Python library and check it: `python -c "import quest_teleop; print(quest_teleop.__version__)"`.
+   This alone is enough to run `quest-teleop-demo` and check it with `quest-teleop-probe` (no headset).
+2. For the headset app, clone the repository and run `android/setup_toolchain.sh`. Tell the user first: it
+   downloads about 2.4 GB into `~/android-sdk` and accepts the Android SDK licence agreements on their behalf.
+   It needs cmake, make, curl, unzip, zip and Java 17+ (see Install).
+3. Some steps need the user in person; ask them to do these and to tell you when done: enable developer mode in the
+   Meta Horizon phone app; plug in the headset, put it on, tap "USB detected" and allow; accept "Allow USB
+   debugging"; turn "Link auto connect" off. Then check `adb devices` lists the headset as `device`.
+4. Some steps need root: the udev rule on Linux and the firewall ports. Show the user the exact command and ask
+   before running anything with sudo. Over USB (`adb reverse`), the firewall change is not needed.
+5. `android/build_apk.sh install`, then `quest-teleop-demo`, then start Quest Teleop in the headset. The status
+   page at http://localhost:8800 (or `curl -s http://localhost:8800/api/state`) shows whether the headset connected.
+6. To connect the user's own simulator or robot, follow "Use it with your own simulator" (a complete runnable
+   example is at the top) and "Recording takes".
+7. If something fails, read Troubleshooting before changing anything.
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/index.md -->
+
+# quest-teleop documentation
+
+quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest 2 (or a later Quest) without a game
+engine. It has four parts:
+
+* **Headset app** (`client/quest`): native OpenXR + OpenGL ES 3 in C++, one `NativeActivity`, no Java, no Gradle.
+  It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every
+  display frame, plays vibration, and shows the server's cues, status and buttons.
+* **Python library** (`quest_teleop`, numpy only): stream any 3D scene, read the controllers, send haptics and text
+  cues, show a control panel with your own actions, map a hand to a robot tool safely, record takes, and serve a
+  local status page.
+* **Desktop client** (`client/desktop`): the same C++ core in a window, driven by mouse and keyboard, to try a server
+  without a headset.
+* **Demo** (`quest-teleop-demo`): two grippers, a cube, a rope and a cloth, using every feature above.
+
+## Pages
+
+Read them in this order the first time.
+
+1. [Install](https://entangledquantum.github.io/quest-teleop/docs/install.md): the Python library with pip; the Android toolchain, building and installing the APK; the
+   desktop client.
+2. [Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md): developer mode, USB debugging, the udev rule on Linux, firewall ports, USB link
+   with `adb reverse`.
+3. [Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-start.md): run the demo, connect the headset or the desktop client, the controls.
+4. [Use it with your own simulator](https://entangledquantum.github.io/quest-teleop/docs/library.md): the server API, streaming a scene, input, haptics, cues, the panel
+   and actions, safe hand-to-tool mapping.
+5. [Recording takes](https://entangledquantum.github.io/quest-teleop/docs/recording.md): `TakeRecorder`, the file layout, the arrays, loading takes.
+6. [Status page and trajectory viewer](https://entangledquantum.github.io/quest-teleop/docs/status-page.md): the local web page, its data callback and endpoints.
+7. [Protocol](https://entangledquantum.github.io/quest-teleop/docs/protocol.md): the wire format, for writing another client or server.
+8. [Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md): latency and bandwidth on loopback and on a Quest 2.
+9. [Troubleshooting](https://entangledquantum.github.io/quest-teleop/docs/troubleshooting.md): the headset does not appear in adb, the app does not find the server,
+   and other problems.
+10. [FAQ](https://entangledquantum.github.io/quest-teleop/docs/faq.md).
+
+## For AI agents
+
+Every page is published twice: as HTML (`install.html`) and as plain Markdown (`install.md`) at the same path.
+[`/llms.txt`](https://entangledquantum.github.io/quest-teleop/llms.txt) lists all pages with their Markdown links, and [`/llms-full.txt`](https://entangledquantum.github.io/quest-teleop/llms-full.txt) has
+the whole documentation in one file. Steps that need a person (putting on the headset, tapping "Allow", enabling
+developer mode in the phone app) or root (udev rule, firewall) are marked as such in the pages.
+
+## Source
+
+<https://github.com/EntangledQuantum/quest-teleop>, MIT licence. These pages document version 0.2.0.
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/install.md -->
+
+# Install
+
+There are up to three things to install: the Python library (always), the headset app (once per headset), and the
+desktop client (optional, for trying a server without a headset).
+
+## Requirements
+
+| What | Needed for |
+|---|---|
+| Python 3.10 or newer, pip | the library, the demo, the probe |
+| numpy | the library (installed automatically) |
+| git | cloning the repository to build the headset app or the desktop client |
+| Linux on x86-64 | the build scripts (`android/setup_toolchain.sh` downloads the Linux Android tools) |
+| cmake 3.18 or newer, make, curl, unzip, zip | building the APK |
+| a Java runtime, version 17 or newer | `sdkmanager`, `apksigner` and `keytool` while building the APK |
+| about 2.5 GB of disk | the Android SDK tools, the NDK and the OpenXR loader |
+| a USB-C data cable | installing the app on the headset |
+
+On Debian or Ubuntu, for example:
+
+```bash
+sudo apt install git python3-pip cmake make curl unzip zip openjdk-17-jdk-headless
+```
+
+## 1. The Python library
+
+```bash
+pip install git+https://github.com/EntangledQuantum/quest-teleop
+```
+
+Or from a clone:
+
+```bash
+git clone https://github.com/EntangledQuantum/quest-teleop.git
+cd quest-teleop
+pip install .            # or: pip install -e .   (editable, for working on the library)
+```
+
+This installs the `quest_teleop` package (its only dependency is numpy) and two commands:
+
+| Command | What it does |
+|---|---|
+| `quest-teleop-demo` | the bundled demo server with a mock world, the status page and recording ([Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-start.md)) |
+| `quest-teleop-probe` | a headless Python client: checks a server and measures latency and bandwidth |
+
+Check it:
+
+```bash
+python -c "import quest_teleop; print(quest_teleop.__version__)"     # 0.2.0
+quest-teleop-demo --help
+```
+
+## 2. The headset app
+
+The app is built from the repository with two scripts. No Android Studio, no Gradle, no Java sources: NDK clang
+through CMake builds one shared library, then `aapt2`, `zip`, `zipalign` and `apksigner` package and sign it with a
+debug key.
+
+### 2.1 Install the Android toolchain (once)
+
+```bash
+git clone https://github.com/EntangledQuantum/quest-teleop.git     # if you have not cloned it yet
+cd quest-teleop
+android/setup_toolchain.sh
+```
+
+It installs into `~/android-sdk` (set `ANDROID_HOME` to choose another folder), about 2.4 GB:
+
+| Component | Version |
+|---|---|
+| Android command-line tools | 11076708 |
+| platform-tools (`adb`) | latest |
+| build-tools (`aapt2`, `zipalign`, `apksigner`) | 34.0.0 |
+| platform (`android.jar`) | android-32 (Quest 2 runs Android 12L) |
+| NDK | 27.2.12479018 (r27c) |
+| Khronos OpenXR loader for Android | 1.1.65 |
+
+It downloads only from `dl.google.com` and `github.com/KhronosGroup`. **Running it accepts the Android SDK licence
+agreements** (`sdkmanager --licenses`); an agent should tell the user this before running it. Running it again is
+safe: finished parts are skipped.
+
+At the end it prints where `adb` is: `~/android-sdk/platform-tools/adb`. The other pages write plain `adb`; either
+put that folder on your `PATH` or use the full path:
+
+```bash
+export PATH="$HOME/android-sdk/platform-tools:$PATH"
+```
+
+### 2.2 Build the APK
+
+```bash
+android/build_apk.sh            # builds build/quest-teleop.apk (about 1 MB)
+```
+
+The APK is signed with the standard Android debug key in `~/.android/debug.keystore` (created with `keytool` if it
+is missing). That is all a sideloaded developer build needs.
+
+### 2.3 Install it on the headset
+
+The headset must be in developer mode, connected by USB, and listed by `adb devices` as `device`: see
+[Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md) first. Then:
+
+```bash
+android/build_apk.sh install    # builds, runs `adb install -r build/quest-teleop.apk`, and starts the app
+```
+
+To start the app with a fixed server address instead of finding the server by itself:
+
+```bash
+SERVER=192.168.1.20 android/build_apk.sh install
+```
+
+An APK that is already built installs with plain adb:
+
+```bash
+adb install -r build/quest-teleop.apk
+```
+
+In the headset the app is under **Library**, filter **Unknown sources**, as **Quest Teleop**. Its package name is
+`com.entangledquantum.questteleop`.
+
+## 3. The desktop client (optional)
+
+The same C++ core as the headset app, in an X11 window. Needs a C++17 compiler and the X11, EGL, OpenGL ES and zlib
+development files:
+
+```bash
+sudo apt install g++ cmake make libx11-dev libegl-dev libgles-dev zlib1g-dev     # Debian / Ubuntu
+cmake -S client -B build/desktop && cmake --build build/desktop -j
+build/desktop/qt_desktop                     # finds the server by broadcast
+build/desktop/qt_desktop --server 127.0.0.1  # or: a given address, HOST[:PORT]
+```
+
+Options: `--server HOST[:PORT]`, `--tcp-only` (tunnel everything through TCP), `--size WxH`. The controls are on the
+[Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-start.md#4-desktop-client-controls) page.
+
+## 4. Run the tests (optional)
+
+In a clone:
+
+```bash
+pip install pytest
+python -m pytest -q
+```
+
+They cover protocol round trips, the server and the probe over loopback, recovery from packet loss, recording and
+the status page.
+
+## Uninstall
+
+```bash
+pip uninstall quest-teleop
+adb uninstall com.entangledquantum.questteleop
+```
+
+The toolchain is the folder `~/android-sdk` (or your `ANDROID_HOME`); delete it by hand only if nothing else uses
+it.
+
+Next: [Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md -->
+
+# Quest 2 setup
+
+What the headset needs before the app can be installed and reach your computer. Steps marked **(person)** need
+someone with the headset or the phone; steps marked **(root)** need `sudo` on the computer.
+
+## 1. Developer mode (once) (person)
+
+1. In the **Meta Horizon** phone app, logged in with the headset's account, create or join a developer organisation
+   at <https://developers.meta.com/horizon/manage/organizations/create/> and verify the account.
+2. In the phone app: **Menu**, **Devices**, the headset, **Headset settings**, **Developer mode**: on.
+3. Reboot the headset.
+
+## 2. Connect by USB (person)
+
+1. Connect the headset to the computer with a USB-C **data** cable (some cables only charge) and put the headset on.
+2. A **"USB detected"** notification appears. Tap it and **allow** access. Until this is accepted the headset does
+   not show up in `adb devices` at all.
+3. An **"Allow USB debugging"** prompt appears. Tick **"Always allow from this computer"** and accept.
+4. Turn **"Link auto connect"** off (on some system versions it is called **"Turn on Link"**). Otherwise the headset
+   tries to start Quest Link when the cable is plugged in, instead of staying in USB debugging.
+
+## 3. Check that adb sees the headset
+
+```bash
+adb devices          # adb is ~/android-sdk/platform-tools/adb after android/setup_toolchain.sh
+```
+
+| `adb devices` shows | Meaning and fix |
+|---|---|
+| `1WMHH... device` | ready |
+| nothing | the cable is charge-only, or "USB detected" was not allowed: replug and tap the notification in the headset |
+| `unauthorized` | accept "Allow USB debugging" in the headset (put it on) |
+| `no permissions` (Linux) | add the udev rule below, then replug |
+
+### udev rule on Linux (root)
+
+Gives your user access to the headset's USB device (vendor id `2833`):
+
+```bash
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="2833", MODE="0666", GROUP="plugdev"' | sudo tee /etc/udev/rules.d/51-oculus.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+Then unplug and replug the cable and run `adb devices` again.
+
+## 4. Install the app
+
+```bash
+android/build_apk.sh install
+```
+
+See [Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#2-the-headset-app). The app is in the headset under **Library**, filter **Unknown
+sources**, as **Quest Teleop**.
+
+## 5. Network: Wi-Fi
+
+The app finds the server by itself: it broadcasts a discovery request and listens for the server's beacons.
+
+* Put the headset and the computer on the **same router**. Use 5 GHz for the headset if you can. A guest network or
+  "client isolation" / "AP isolation" blocks the headset from reaching the computer.
+* Open these ports in the computer's firewall **(root)**:
+
+| Port | Protocol | Used for |
+|---|---|---|
+| 47800 | TCP | handshake, scene, panel, text cues |
+| 47800 | UDP | controller input, state frames, discovery |
+| 47801 | UDP | server beacons (the server announces itself once per second) |
+
+With ufw:
+
+```bash
+sudo ufw allow 47800/tcp && sudo ufw allow 47800:47801/udp
+```
+
+With firewalld:
+
+```bash
+sudo firewall-cmd --add-port=47800/tcp --add-port=47800-47801/udp
+# to keep it after a reboot:
+sudo firewall-cmd --permanent --add-port=47800/tcp --add-port=47800-47801/udp && sudo firewall-cmd --reload
+```
+
+If the server runs on another port (`TeleopServer(port=...)`, `quest-teleop-demo --port ...`), open that port for
+TCP and UDP instead of 47800; the beacon port stays 47801.
+
+## 6. Network: USB cable instead of Wi-Fi
+
+With the headset connected by USB:
+
+```bash
+adb reverse tcp:47800 tcp:47800
+```
+
+The app then reaches the server on its own loopback address (it tries `127.0.0.1` first) and tunnels everything,
+including the datagrams, through that one TCP connection. No firewall change is needed. Run the command again after
+the cable is replugged or the adb server restarts. On a Quest 2 the median latency over USB and over Wi-Fi is the
+same ([Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md)).
+
+## 7. Start and stop the app
+
+From the headset: **Library**, **Unknown sources**, **Quest Teleop**. From the computer:
+
+```bash
+adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity
+adb shell am force-stop com.entangledquantum.questteleop
+```
+
+Launch options, added to `am start` as `--es NAME VALUE`:
+
+| Option | Example | Effect |
+|---|---|---|
+| `server` | `--es server 192.168.1.20` or `--es server 192.168.1.20:47800` | connect to this address instead of discovering the server |
+| `hz` | `--es hz 90` | display refresh rate (default: the system's, 72 Hz on a Quest 2) |
+| `passthrough` | `--es passthrough 0` | start without passthrough (a floor grid is drawn instead) |
+
+The app's log:
+
+```bash
+adb logcat -s quest-teleop
+```
+
+Next: [Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-start.md).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/quick-start.md -->
+
+# Quick start
+
+Run the bundled demo, connect a headset (or the desktop client), move two grippers, record a take, and look at it
+on the status page. Needs the Python library ([Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#1-the-python-library)); the headset part needs
+the app installed ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md)).
+
+## 1. Start the demo server
+
+```bash
+quest-teleop-demo                 # same as: python -m quest_teleop.demo
+```
+
+A mock world: two floating grippers over a table, a cube to pick and place, a rope and a cloth. It prints the
+addresses it listens on and the status page's address:
+
+```
+[quest-teleop] listening on 0.0.0.0:47800 (TCP + UDP), addresses: ...
+[demo] status page: http://localhost:8800    takes are saved in ~/teleop_recordings/...
+```
+
+Every 5 seconds while a client is connected it prints frames per second, traffic and the client's latency. Stop it
+with Ctrl-C.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--port` | 47800 | TCP and UDP port of the server |
+| `--hz` | 60 | simulation and state rate |
+| `--mode` | `clutch` | `clutch`: the gripper follows the hand's motion while the grip is held; `absolute`: the gripper goes where the hand is |
+| `--seconds` | 0 | stop after this long (0: run until Ctrl-C) |
+| `--status-port` | 8800 | port of the status page (0: no status page) |
+| `--data-dir` | `$TELEOP_DATA_DIR`, else `~/teleop_recordings` | where takes are saved |
+| `--session` | date and time | name of this run (a folder in the data directory) |
+| `--host-label` | host name and address | what the headset shows as the computer |
+
+## 2. Connect a client
+
+**Headset over Wi-Fi.** Start **Quest Teleop** in the headset (Library, filter "Unknown sources"). It finds the
+server by itself if the firewall ports are open ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#5-network-wi-fi)).
+
+**Headset over USB.**
+
+```bash
+adb reverse tcp:47800 tcp:47800
+adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity
+```
+
+**No headset: the desktop client** ([Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#3-the-desktop-client-optional)):
+
+```bash
+build/desktop/qt_desktop
+```
+
+**No display at all: the probe**, a headless Python client that moves a synthetic controller and prints latency and
+bandwidth:
+
+```bash
+quest-teleop-probe --host 127.0.0.1 --seconds 10 --motion circle     # --motion still | circle | jump, --tcp-only
+```
+
+When the scene appears, the headset places the working area in front of you at a comfortable size.
+
+## 3. Controls in the headset
+
+| Control | Action |
+|---|---|
+| **Grip** (hold) | move that hand's gripper (right controller: right gripper, left: left) |
+| **Trigger** (hold) | close the gripper slowly (deeper is faster) |
+| **A / X** (hold) | open the gripper slowly |
+| **B** | start / stop recording a take |
+| **Left menu button** | open / close the panel; the server is told and holds the robot meanwhile |
+
+With the panel open:
+
+| Control | Action |
+|---|---|
+| point + **trigger** | press the button the beam points at; "danger" actions (reset, delete) need the trigger held for about a second |
+| one **grip** | drag and turn the scene |
+| both **grips** | scale the scene |
+| left **stick** | slide the scene |
+| right **stick** | turn and raise the scene |
+
+The panel shows the connection, the session, the demo's actions (start recording, reset the scene, delete the last
+take), the control legend, and settings: larger text, left-handed, passthrough, shadows, scene size, placement.
+
+**Try the go-back cue.** Each gripper has a limited reach (a sphere around its base post) and cannot enter the
+table. Hold the grip and pull your hand beyond that: the gripper stops, the controller vibrates, and the headset
+shows a see-through shell where the gripper really is, a marker where your hand asks it to be, a line between them,
+and the text "Robot cannot follow". Bring your hand back to the highlighted tool to continue.
+
+## 4. Desktop client controls
+
+| Input | Action |
+|---|---|
+| right-drag | look around |
+| `W A S D Q E` | move the head |
+| left-drag | move the active hand (with Shift: turn it) |
+| mouse wheel | move the hand nearer / farther |
+| `TAB` | switch between left and right hand |
+| `G` | grip |
+| `T` | trigger |
+| `1` / `2` | primary / secondary button (A / B on the right hand) |
+| `M` | menu |
+| `ESC` | quit |
+
+## 5. Record a take and look at it
+
+1. Press **B** (desktop: `TAB` to the right hand, then `2`). The wrist card shows `REC 00:00 take 1`.
+2. Move a gripper, close it on the cube, move it, open it.
+3. Press **B** again. The headset shows "Take 1 saved" with the number of steps.
+4. Open <http://localhost:8800> on the computer. Under **Recordings**, select the take: the trajectory view shows
+   each gripper's path in 3D with the gripper state marked along it.
+
+The take is a `.npz` file in `~/teleop_recordings/<session>/`. See [Recording takes](https://entangledquantum.github.io/quest-teleop/docs/recording.md) for its contents
+and [Status page](https://entangledquantum.github.io/quest-teleop/docs/status-page.md) for the page.
+
+Next: [Use it with your own simulator](https://entangledquantum.github.io/quest-teleop/docs/library.md).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/library.md -->
+
+# Use it with your own simulator
+
+The Python library is the computer side. Your program owns the simulator (or the robot driver); quest-teleop
+streams what it should look like to the headset and hands back the controllers. Nothing in the library or the app
+is specific to a task: you describe the scene with meshes and poses, and the panel with rows and buttons.
+
+## The loop
+
+Every application has the same shape:
+
+1. Build a `Scene`: meshes, and nodes that place them.
+2. Start a `TeleopServer` and give it the scene.
+3. Every simulation step: read the newest controller sample (`get_input`), step your simulator with it, write the
+   new poses and vertices into the scene, and call `publish`.
+
+`publish` sends each connected client only what changed since the frame it last acknowledged, so things that do not
+move cost nothing. It runs in your thread and never blocks on the network.
+
+## A complete example
+
+A box that follows the right controller while its grip button is held, with a vibration when the grip closes and a
+panel button that resets the box. Run it, then connect the headset, the desktop client or the probe
+([Quick start](https://entangledquantum.github.io/quest-teleop/docs/quick-start.md#2-connect-a-client)).
+
+```python
+"""A box that follows the right controller while its grip button is held."""
+import time
+
+import numpy as np
+from quest_teleop import Action, Panel, Row, Scene, TeleopServer
+from quest_teleop.scene import box_mesh
+
+scene = Scene("my sim", bounds_min=(-1, -1, 0), bounds_max=(1, 1, 2), up_axis=2,
+              focus_center=(0, 0, 0.3), focus_radius=0.4)
+v, f, n = box_mesh(half=(0.03, 0.03, 0.03))
+box = scene.add_node("box", scene.add_mesh(v, f, n), pos=(0, 0, 0.3), color=(0.55, 0.56, 1.0, 1))
+
+srv = TeleopServer(name="my sim").start()
+srv.set_scene(scene)
+
+box_pos = np.array([0.0, 0.0, 0.3])
+offset = None                                   # box position minus hand position while the grip is held
+held_before = False
+try:
+    while True:
+        inp = srv.get_input()                   # newest controller sample, or None
+        right = inp.hands[1] if inp is not None else None
+        held = bool(inp is not None and not inp.edit_mode and right.active and right.squeeze > 0.5)
+        if held:
+            hand_pos, hand_quat = inp.hand_in_scene(1)   # right controller in scene coordinates
+            if not held_before:
+                offset = box_pos - hand_pos
+                srv.haptic(1, amplitude=0.5, duration=0.03)
+            box_pos = hand_pos + offset
+        held_before = held
+        scene.set_pose(box, box_pos, (0, 0, 0, 1))
+
+        panel = Panel(title="My sim", subtitle="one box")
+        panel.status("ok" if held else "none", "Moving the box" if held else "Hold the right grip")
+        panel.rows = [Row("BOX Z", f"{box_pos[2]:.2f} m", wrist=True)]
+        panel.actions = [Action(1, "Reset the box", style="primary")]
+        panel.legend = [("$R GRIP (HOLD)", "move the box")]
+        srv.set_panel(panel)                    # nothing is sent when nothing changed
+        if 1 in srv.pop_actions():
+            box_pos = np.array([0.0, 0.0, 0.3])
+            srv.set_text(1, "Box reset", ttl=1.5)
+
+        srv.publish(echo=inp)                   # sends only what changed; echo gives the latency measurement
+        time.sleep(1 / 60)
+except KeyboardInterrupt:
+    srv.stop()
+```
+
+The bundled demo (`server/quest_teleop/demo.py`, about 400 lines) is the full version: two grippers with
+`ToolTeleop`, `RateGripper`, `ContactHaptics` and `GoBackCue`, recording and the status page.
+
+## Coordinates
+
+* **Scene space** is your simulator's world frame, in metres. `up_axis` says which axis is up (0 x, 1 y, 2 z).
+  Quaternions are always `x y z w`.
+* The headset draws the scene somewhere in the room and the user can move, turn and scale it. Controller poses
+  arrive in the room's frame together with that placement; `InputFrame.hand_in_scene(i)` converts them to scene
+  space for you. A scene drawn at twice its size halves the hand motion in simulator units.
+* Positions are sent as 16-bit values over the scene bounds, so **the bounds must contain everything that moves**
+  (values outside are clamped). A 2 m scene gives 0.03 mm steps.
+
+## Scene
+
+```python
+from quest_teleop import Scene
+scene = Scene(name="scene", bounds_min=(-1, -1, -1), bounds_max=(1, 1, 1), up_axis=2,
+              focus_center=None, focus_radius=None, view_dir=(0, 0, 0))
+```
+
+`focus_center` and `focus_radius` describe the region the operator works in: the headset puts it in front of the
+user at a comfortable size when the scene loads. `view_dir` is the horizontal direction, in scene coordinates, the
+operator should look along at the start (zero: no preference).
+
+| Method | What it does |
+|---|---|
+| `add_mesh(vertices, faces, normals=None, colors=None, double_sided=False)` | a mesh (sent once); returns its id. `vertices` (V, 3), `faces` (F, 3) ints, `normals` (V, 3), `colors` (V, 3 or 4) in 0..1 |
+| `add_node(name, mesh, pos=(0,0,0), quat=(0,0,0,1), scale=1.0, color=(1,1,1,1), parent=P_SCENE, flags=F_VISIBLE)` | a rigid node that draws a mesh; returns its id. `color` multiplies the mesh colours; alpha below 1 draws it blended |
+| `add_deform(name, vertices, faces, color=..., colors=None, parent=P_SCENE, flags=F_VISIBLE, double_sided=True)` | a mesh whose vertex positions you stream (cloth, soft bodies); at most 65535 vertices |
+| `add_tube(name, points, radius, color=..., parent=P_SCENE, flags=F_VISIBLE)` | a polyline of fixed point count drawn as a tube (rope, cable, pointer line) |
+| `set_pose(node, pos=None, quat=None)` | move a node |
+| `set_poses(nodes, pos, quat)` | move many nodes at once (arrays) |
+| `set_points(node, points)` | new vertex positions of a deform node, or new points of a tube |
+| `set_visible(node, visible)` | show or hide a node |
+| `set_color(node, color)` | change a node's colour |
+| `vertex_deadband` | attribute, metres: streamed vertices are re-sent only when they moved more than this (default 0). A few hundredths of a millimetre stops solver jitter in resting cloth from being streamed |
+
+Mesh helpers in `quest_teleop.scene` return `(vertices, faces, normals)`: `box_mesh(half=(0.5, 0.5, 0.5))`,
+`sphere_mesh(radius=0.5, rings=12, sectors=20)`, `cylinder_mesh(radius=0.5, half_height=0.5, sectors=20,
+cap_round=False)`.
+
+**Parents.** A node's pose is given in its parent's frame. Nodes attached to the head or a controller move with it
+on the headset with no network delay; use them for cues that must stick to the hand. Constants in
+`quest_teleop.protocol`:
+
+| Constant | Frame |
+|---|---|
+| `P_SCENE` | the scene (default) |
+| `P_STAGE` | the room (y up, origin on the floor) |
+| `P_HEAD` | the head |
+| `P_LEFT_GRIP`, `P_RIGHT_GRIP` | a controller's grip pose |
+| `P_LEFT_AIM`, `P_RIGHT_AIM` | a controller's pointing ray |
+
+**Flags** (combine with `|`): `F_VISIBLE`, `F_BLEND` (use alpha), `F_UNLIT`, `F_ON_TOP` (no depth test), `F_FLAT`
+(flat shading), `F_HIGHLIGHT` (accent rim, e.g. the tool that is following the hand).
+
+Adding meshes or nodes after `set_scene` is allowed: the next `publish` notices and every client reloads the scene.
+Calling `set_scene` with another `Scene` replaces it.
+
+## TeleopServer
+
+```python
+from quest_teleop import TeleopServer
+srv = TeleopServer(name="quest-teleop server", port=47800, bind="0.0.0.0", beacon=True, state_hz=60.0,
+                   verbose=True).start()
+```
+
+`beacon=True` announces the server by UDP broadcast on port 47801 once per second, so the headset finds it.
+`state_hz` is what the server tells clients its state rate is; the actual rate is how often you call `publish`.
+
+| Method | What it does |
+|---|---|
+| `start()` | open the sockets and threads; returns the server |
+| `stop()` | say goodbye to the clients and close everything |
+| `set_scene(scene)` | stream this scene; every client (re)loads it |
+| `get_input(max_age=0.5)` | the newest `InputFrame` of the controlling client, or `None` (no client, headset not worn, or older than `max_age` seconds) |
+| `publish(echo=None)` | send one state frame. Pass the `InputFrame` this state results from as `echo` to get the latency measurement. Returns bytes sent |
+| `haptic(hand, amplitude, duration=0.02, frequency=0.0)` | vibrate controller `hand` (0 left, 1 right); amplitude 0..1, duration in seconds. Quest 2 controllers ignore the frequency |
+| `set_text(slot, text, anchor=TEXT_HUD, pos=(0,0,0), size=0.03, color=(1,1,1,1), ttl=0.0)` | show text in slot 0..255; an empty string clears the slot |
+| `set_panel(panel)` | show or update the control panel; cheap to call every step |
+| `pop_actions()` | ids of the panel buttons pressed since the last call |
+| `note_timing(step_s, processing_s)` | report how long the simulator step and the rest of your work took (for the status page's latency breakdown) |
+| `monitor()` | everything a status display needs (clients, rates, loss, latency parts); used by the status page |
+| `pop_stats()` | traffic and the client's latency since the last call |
+| `clients()`, `controller()`, `n_clients` | connected clients; the one whose input drives the simulator (the longest-connected one that is sending input) |
+| `on_connect`, `on_disconnect` | attributes: set to a function `f(client)` to be called |
+
+## Input
+
+`get_input()` returns an `InputFrame` (or `None`):
+
+| Field | Meaning |
+|---|---|
+| `hands` | `(left, right)`, two `Hand` objects |
+| `edit_mode` | `True` while the user has the headset menu open or is placing the scene: **ignore the controls and hold the robot** |
+| `hand_in_scene(i, aim=False)` | `(pos, quat)` of controller `i` in scene coordinates; `aim=True` gives the pointing ray instead of the grip |
+| `scene_pose(pos, quat)` | convert any room-space pose to scene space |
+| `head_pos`, `head_quat` | the head, room space |
+| `place_pos`, `place_quat`, `place_scale` | where the scene is drawn in the room |
+| `flags` | bit `IF_FOCUSED`: the headset is worn and the app has focus; `IF_PASSTHROUGH`: passthrough is on |
+| `latency_us` | the client's last measured latency |
+
+A `Hand`:
+
+| Field | Meaning |
+|---|---|
+| `active` | the controller is present and its grip pose is valid |
+| `trigger`, `squeeze` | 0..1 (index trigger, grip button) |
+| `stick` | thumbstick x, y in -1..1 |
+| `buttons`, `button(mask)` | button bits: `B_PRIMARY` (A / X), `B_SECONDARY` (B / Y), `B_STICK`, `B_MENU`, and touch bits `B_TRIGGER_TOUCH`, `B_STICK_TOUCH`, `B_PRIMARY_TOUCH`, `B_SECONDARY_TOUCH`, `B_THUMBREST_TOUCH` (constants in `quest_teleop.protocol`) |
+| `grip_pos`, `grip_quat`, `aim_pos`, `aim_quat` | raw poses in room space |
+| `vel`, `angvel` | grip velocity and angular velocity, room space |
+
+The left menu button is used by the headset app itself (it opens the panel), so it is not a control for your
+application. When the user turns on "left-handed" in the headset settings, the app swaps the two hands in the input
+and the two haptic channels, so your code needs no special handling.
+
+## Haptics
+
+```python
+srv.haptic(1, amplitude=0.6, duration=0.03)     # right controller, short tick
+srv.haptic(0, 0.0)                              # amplitude 0 stops the left one
+```
+
+The haptic command travels in every state datagram until it is replaced, so a lost datagram does not lose it.
+`ContactHaptics` turns a contact force into vibration: a strong short tick when contact starts, then an amplitude
+that follows the force.
+
+```python
+from quest_teleop import ContactHaptics
+touch = ContactHaptics(f_min=0.3, f_max=15.0)   # force thresholds in N
+hp = touch.update(dt, force)                    # every step; returns (amplitude, duration) or None
+if hp:
+    srv.haptic(1, *hp)
+```
+
+## Text cues
+
+```python
+from quest_teleop import protocol as P
+srv.set_text(0, "Recording", ttl=2.0)                                   # head-locked, for 2 s
+srv.set_text(1, "grasp here", anchor=1 + P.P_SCENE, pos=(0.4, 0, 0.3),  # in the scene, facing the viewer
+             size=0.02, color=(1, 0.85, 0.2, 1))
+srv.set_text(1, "")                                                     # clear slot 1
+```
+
+`anchor=TEXT_HUD` (0) puts the text on a panel 1 m in front of the eyes, `pos` being the offset on it.
+`anchor=1 + parent` puts it at `pos` in that parent's frame (`P_SCENE`, `P_LEFT_GRIP`, ...). `size` is the line
+height in metres, `ttl` seconds (0: until replaced). Lines are separated by `\n`.
+
+Cues other than text are ordinary nodes: add them hidden and switch them with `set_visible`, `set_pose` and
+`set_color`. The go-back cue below is built that way.
+
+## Panel and actions
+
+The panel is what the headset shows on the wrist card and in the menu: a title, a status line, your rows, your
+buttons and a control legend. The headset lays it out; your code only describes it.
+
+```python
+from quest_teleop import Action, Panel, Row
+
+panel = Panel(title="Pick and place", subtitle="simulator A, config B")
+panel.status("recording", "REC 00:12  take 3")          # style: none | recording | caution | ok
+panel.rows = [Row("RUN", "session-01", wrist=True),       # wrist=True: also on the wrist card
+              Row("SIM SPEED", "0.55x", style="caution")] # style: normal | accent | caution | failure
+panel.actions = [Action(1, "Stop recording", hint="$Rs", style="primary", active=True),
+                 Action(2, "Reset the scene", hint="hold", style="danger", confirm=True)]
+panel.legend = [("$R GRIP", "move the gripper"), ("$R TRIGGER", "close slowly")]
+srv.set_panel(panel)
+
+for action_id in srv.pop_actions():
+    ...
+```
+
+| `Action` field | Meaning |
+|---|---|
+| `id` | number returned by `pop_actions()` |
+| `label`, `hint` | button text; the hint (a shortcut) is printed at its right edge |
+| `style` | `normal`, `primary` or `danger` |
+| `enabled` | greyed out when `False` |
+| `confirm` | the user must hold the trigger on it for about a second |
+| `active` | drawn as switched on |
+
+**Role tokens** in any panel string are replaced on the headset, so the text stays right when the user swaps hands:
+`$R` / `$L` = "Right" / "Left" (the controller in that role), `$Rp`, `$Rs`, `$Lp`, `$Ls` = that controller's primary
+or secondary button (A, B, X, Y).
+
+## Safe hand-to-tool mapping
+
+For robots and grippers, `ToolTeleop` turns one controller into a tool-pose command that the robot can follow:
+
+* The user holds a clutch (the grip button) to move the tool. In `clutch` mode the tool follows the hand's motion
+  relative to where the clutch was pressed; in `absolute` mode the tool goes where the hand is.
+* The command moves toward the hand at a bounded speed and never leads the measured tool by more than `max_lead`.
+* If the hand gets further from the measured tool than the tether (sudden move, joint limit, out of reach, blocked),
+  tracking stops (state `lost`): the robot holds, and `out.cue` says to show where the tool really is. Tracking
+  resumes when the hand is back near the tool.
+
+```python
+from quest_teleop import GoBackCue, RateGripper, TeleopCfg, ToolTeleop
+from quest_teleop import protocol as P
+
+teleop = ToolTeleop(TeleopCfg(mode="clutch", max_speed=0.25, tether=0.08))
+gripper = RateGripper(close_time=2.0, open_time=1.5)
+cue = GoBackCue(scene, "right", tool_mesh=None)          # adds its hidden nodes to the scene
+
+# every step, i = 1 for the right hand
+hand, clutch, trigger, open_btn = None, False, 0.0, False
+if inp is not None and not inp.edit_mode and inp.hands[i].active:
+    h = inp.hands[i]
+    hand, clutch, trigger, open_btn = inp.hand_in_scene(i), h.squeeze > 0.5, h.trigger, h.button(P.B_PRIMARY)
+out = teleop.update(dt, hand, clutch, tool_pos, tool_quat, reachable=ik_ok)
+closure = gripper.update(dt, trigger, open_btn)          # 0 open .. 1 closed
+robot.command(out.cmd_pos, out.cmd_quat, closure)        # your robot or simulator
+cue.update(dt, out, tool_pos, tool_quat, srv)            # shows / hides the go-back cue and its text
+if out.lost_edge:
+    srv.haptic(i, 1.0, 0.12)
+```
+
+`TeleopCfg` fields (defaults): `mode="clutch"`, `max_speed=0.25` m/s, `max_angular_speed=2.0` rad/s,
+`max_lead=0.03` m, `max_angular_lead=0.35` rad, `tether=0.08` m, `tether_angle=0.9` rad, `tether_time=0.25` s,
+`reengage=0.03` m, `reengage_angle=0.45` rad, `motion_scale=1.0`, `absolute_offset_pos`, `absolute_offset_quat`.
+
+`update` returns a `TeleopOut` with `state` (`idle`, `tracking`, `lost`), `cmd_pos`, `cmd_quat`, `wish_pos`,
+`wish_quat` (where the hand asks the tool to be), `lag`, `lag_angle`, `cue`, `engaged_edge`, `lost_edge`.
+
+## Latency measurement
+
+Pass the input sample to `publish(echo=inp)`. The headset then measures the time from sampling the controllers to
+holding the state that resulted from that sample, and reports it back. To split it into parts on the status page,
+also report your timing:
+
+```python
+inp = srv.get_input()
+t0 = time.perf_counter()
+step_simulator(inp)
+step = time.perf_counter() - t0
+srv.publish(echo=inp)
+srv.note_timing(step, time.perf_counter() - t0 - step)
+```
+
+Next: [Recording takes](https://entangledquantum.github.io/quest-teleop/docs/recording.md).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/recording.md -->
+
+# Recording takes
+
+A **take** is one recorded stretch of teleoperation: the tools' poses, the grippers, the controllers and the time at
+every step, plus any data of your own. `TakeRecorder` writes one compressed `.npz` file per take and keeps an index
+of all takes, which the [status page](https://entangledquantum.github.io/quest-teleop/docs/status-page.md) lists and opens in the trajectory viewer.
+
+## Recording
+
+```python
+from quest_teleop import TakeRecorder
+
+rec = TakeRecorder(tools=("left", "right"), max_opening=0.08)   # folder: $TELEOP_DATA_DIR or ~/teleop_recordings
+rec.write_session({"application": "my sim", "robot": "two grippers"})   # optional, once per session
+
+rec.start(start_state={"cube": cube_pos})    # optional: your state just before the first step
+while recording:
+    rec.add(sim.time, tool_pos, tool_quat,                # (N, 3), (N, 4) for N tools
+            opening=openings, opening_cmd=opening_cmds,   # (N,) metres
+            target_pos=cmd_pos, target_quat=cmd_quat,
+            tool_state=[1, 0],                            # 0 idle, 1 following the hand, 2 lost
+            ctrl_pos=..., ctrl_quat=..., trigger=..., squeeze=..., buttons=...,
+            extra={"cube_pos": cube_pos, "rope": rope_points})
+entry = rec.stop(info={"valid": True, "flags": []})       # writes the file in the background
+```
+
+`add` does nothing while the recorder is not recording, so it can be called every step. Give the same fields at
+every step of a take.
+
+| `TakeRecorder` | |
+|---|---|
+| `TakeRecorder(root=None, session=None, tools=("left", "right"), max_opening=None, up_axis=2)` | `root`: data folder (else `$TELEOP_DATA_DIR`, else `~/teleop_recordings`); `session`: run name (default: date and time); `max_opening`: full gripper opening in metres, one value or one per tool (for the open / closed thresholds) |
+| `start(start_state=None)` | begin a take |
+| `add(t, tool_pos, tool_quat=None, *, opening, opening_cmd, grip_state, target_pos, target_quat, tool_state, ctrl_pos, ctrl_quat, trigger, squeeze, buttons, extra)` | one step; everything after `tool_pos` is optional |
+| `stop(info=None)` | end the take, write it, return its index entry (or `None` if nothing was recorded). `info` is merged into the entry |
+| `discard()` | end the take without writing it |
+| `delete_last()` | delete the newest take of this session (file and index entry) |
+| `write_session(info)` | write `session.json` for this session |
+| `wait()` | wait until the last take is written (call before exiting) |
+| `recording`, `steps`, `take`, `n_saved`, `elapsed`, `root`, `session` | state: recording or not, steps so far, next take number, takes saved this session, seconds since start, folders |
+
+The `info` keys `valid` (true / false) and `flags` (a list of strings) are shown in the status page's validity
+column.
+
+## Files
+
+```
+~/teleop_recordings/index.json                      every take: file, session, take, started, steps, seconds,
+                                                    wall_seconds, rate_hz, tools, and your info
+~/teleop_recordings/<session>/session.json          what write_session() was given
+~/teleop_recordings/<session>/take_003_<time>.npz   one take
+```
+
+## Arrays in a take
+
+T steps, N tools. Only `t` and `tool/pos` are always present.
+
+| Array | Shape | Meaning |
+|---|---|---|
+| `t` | (T,) | application time of each step [s] (for example simulated time) |
+| `t_wall` | (T,) | wall-clock seconds since the take started |
+| `tool/pos` | (T, N, 3) | measured tool positions [m], scene coordinates |
+| `tool/quat` | (T, N, 4) | measured tool orientations, xyzw |
+| `tool/target_pos`, `tool/target_quat` | (T, N, 3), (T, N, 4) | commanded tool poses |
+| `tool/opening` | (T, N) | measured gripper opening [m] |
+| `tool/opening_cmd` | (T, N) | commanded gripper opening [m] |
+| `tool/grip_state` | (T, N) int8 | 0 open, 1 closing, 2 closed, 3 opening (given, or derived from the openings) |
+| `tool/state` | (T, N) int8 | 0 idle, 1 following the hand, 2 lost (could not follow) |
+| `ctrl/pos`, `ctrl/quat` | (T, N, 3), (T, N, 4) | the controllers in scene coordinates (NaN while not tracked) |
+| `ctrl/trigger`, `ctrl/squeeze` | (T, N) | 0..1 |
+| `ctrl/buttons` | (T, N) int32 | button bits (see [Input](https://entangledquantum.github.io/quest-teleop/docs/library.md#input)) |
+| `extra/<name>` | (T, ...) | your own per-step data |
+| `start/<name>` | any | your state just before the first step |
+| `meta` | string | JSON: tools, max_opening, rate_hz, session, take, started, up_axis |
+
+## Loading takes
+
+```python
+import os
+from quest_teleop import load_take, take_summary
+from quest_teleop.recording import read_index
+
+root = os.path.expanduser("~/teleop_recordings")
+for entry in read_index(root):                       # every take listed in index.json
+    take = load_take(os.path.join(root, entry["file"]))
+    summary = take_summary(take)                     # per tool: path length, gripper closes / opens,
+                                                     # share of time closed / following, lost events
+    print(entry["session"], entry["take"], take["tool/pos"].shape, summary["tools"][0]["path_m"])
+```
+
+`load_take(path, payload=False)` skips the `extra/` and `start/` arrays (which can be most of the file) and lists
+their names under `extra_keys`. The files are ordinary NumPy archives: `numpy.load(path)` reads them too.
+
+Next: [Status page and trajectory viewer](https://entangledquantum.github.io/quest-teleop/docs/status-page.md).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/status-page.md -->
+
+# Status page and trajectory viewer
+
+`StatusPage` serves a local web page from your server process: who is connected and how, how fast the simulator
+and the network run, where the latency goes, and the recorded takes. Each take opens in a trajectory viewer. Python
+standard library only, live by server-sent events, static HTML with no build step, nothing loaded from the
+internet.
+
+![The status page of the demo: a state strip (server running, headset connected by Wi-Fi, session running, recording take 2), then Connection, Session, Speeds with charts of the simulator real-time factor and network traffic, Latency split into its parts with a bar and a table, and a Recordings table listing one take.](https://entangledquantum.github.io/quest-teleop/assets/img/status_page.png)
+
+## Start it
+
+```python
+from quest_teleop import StatusPage, TakeRecorder, TeleopServer
+
+srv = TeleopServer(name="my sim").start()
+rec = TakeRecorder(tools=("left", "right"), max_opening=0.08)
+page = StatusPage(srv, recordings_dir=rec.root, extra=my_status, title="My sim").start()
+print(page.url)                      # http://localhost:8800
+...
+page.stop()
+```
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `server` | | the `TeleopServer` to watch |
+| `port` | 8800 | HTTP port |
+| `host` | `127.0.0.1` | address to bind; only this computer can open the page. Use `0.0.0.0` to let other machines open it (it has no login) |
+| `extra` | `None` | a function returning your application's part of the page (below), called once per period |
+| `title` | `"Teleoperation"` | page title |
+| `period` | 1.0 | seconds between updates |
+| `history_s` | 600 | seconds of history kept for the charts |
+| `recordings_dir` | `None` | a `TakeRecorder` folder: its takes are listed and open in the trajectory viewer |
+
+The demo starts it on port 8800 (`quest-teleop-demo --status-port 0` turns it off).
+
+## What it shows
+
+* **State strip**: server, headset, session and recording state, each as a shape and words.
+* **Connection**: headset connected and worn, USB or Wi-Fi, device, address, display rate, packet loss each way,
+  scene scale, other clients.
+* **Session**: whatever your `extra` callback reports.
+* **Speeds**: simulator real-time factor and steps per second, network Mbit/s and packets per second, headset frames
+  per second; charts over the last 10 minutes.
+* **Latency**: total (median and 95th percentile) and its parts: network + pickup, wait for the next simulator step,
+  simulator step, server processing, display refresh. The step and processing parts come from
+  `server.note_timing` ([Latency measurement](https://entangledquantum.github.io/quest-teleop/docs/library.md#latency-measurement)).
+* **Recordings**: every take in `recordings_dir`, newest first, with duration, steps, size and validity.
+
+## Your part of the page: `extra`
+
+`extra()` returns a dict; every key is optional:
+
+```python
+def my_status():
+    return {
+        "session": {"name": "run-01",
+                    "state": "running",            # running | paused | recording | idle
+                    "state_text": "Session running",
+                    "rows": [["Scene", "pick and place"], ["Left tool", "idle"]]},
+        "sim": {"rtf": 0.98,                       # simulator speed / real time
+                "steps_per_s": 59.0,
+                "contact_n": 2.5},                 # contact force [N], drawn on the speed chart
+        # "recordings": {...}                      # only to replace the table built from recordings_dir
+    }
+```
+
+## Trajectory viewer
+
+![The trajectory view of take 1: a 3D plot of the left and right tool paths with start and end labels and gripper-state markers, play and scrub controls, a legend, a properties table (session, take, duration, steps, rate, tools, validity, size), a per-tool table (path length, closes, opens, time closed, following, lost), and a gripper-over-time chart.](https://entangledquantum.github.io/quest-teleop/assets/img/trajectory_page.png)
+
+Selecting a take on the status page opens `/take?file=...`:
+
+* each tool's path in 3D: drag to turn, shift-drag or right-drag to move, wheel to zoom; with the view focused,
+  arrow keys turn, shift + arrows move, `+` and `-` zoom, space plays, Home and End jump to the ends;
+* play and scrub through time, at several speeds, optionally with the controller paths;
+* the gripper state marked along the path by shape as well as colour: open, closing, closed, opening, could not
+  follow;
+* the gripper opening over time per tool;
+* the take's properties and a per-tool summary (path length, closes, opens, share of time closed and following,
+  lost events).
+
+## Endpoints
+
+All on the page's own address (default `http://localhost:8800`):
+
+| Path | Returns |
+|---|---|
+| `/` | the status page |
+| `/api/state` | the newest sample as JSON: `server.monitor()` plus your `extra()` and the recordings table |
+| `/api/history` | the samples of the last `history_s` seconds (JSON list) |
+| `/events` | the live stream (server-sent events, one sample per period) |
+| `/take?file=<session>/<take>.npz` | the trajectory viewer |
+| `/api/take?file=<session>/<take>.npz` | that take's paths and properties as JSON |
+| `/fonts/*` | the page's two typefaces |
+
+`/api/state` is handy for scripts and agents: `curl -s http://localhost:8800/api/state`.
+
+## Accessibility
+
+Both pages use real text and tables, shapes plus words for every state, visible keyboard focus, keyboard control of
+the 3D view, and text equivalents for the charts.
+
+Next: [Protocol](https://entangledquantum.github.io/quest-teleop/docs/protocol.md).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/protocol.md -->
+
+# quest-teleop protocol, version 1
+
+This page is [`docs/PROTOCOL.md`](https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/PROTOCOL.md) from the repository.
+
+Reference implementations: `server/quest_teleop/protocol.py` (Python) and `client/core/protocol.h` (C++).
+All integers and floats are little-endian. Positions are metres, quaternions are `x y z w`, strings are
+`u16 length` + UTF-8 bytes.
+
+## Channels
+
+| Channel | Port | Carries |
+|---|---|---|
+| TCP | 47800 (server listens) | handshake, scene definition (meshes, nodes), text cues, bye |
+| UDP | 47800 (server), any (client) | controller input (client to server), state frames (server to client), discovery |
+| UDP broadcast | 47801 | server beacons (optional way to find the server) |
+
+The reliable channel only carries things that are sent once. Everything that repeats every frame goes over UDP as
+absolute values, so a lost datagram never corrupts later frames and nothing is ever retransmitted late.
+
+**TCP-only mode.** A client can set `HELLO.flags bit 0`; both sides then wrap their datagrams in `DGRAM` messages on
+the TCP connection. This is for links that only forward TCP, e.g. USB with `adb reverse tcp:47800 tcp:47800`.
+
+## Finding the server
+
+1. The client broadcasts `DISCOVER` to `255.255.255.255:47800` once per second; the server answers `OFFER` to the
+   sender's address.
+2. The server also broadcasts `OFFER` to port 47801 once per second.
+3. Or the client is given the address (headset: `adb shell am start ... --es server 192.168.1.20`).
+
+## Session
+
+```
+client                                server
+  | -- TCP connect ------------------> |
+  | -- HELLO ------------------------> |
+  | <------------------------ WELCOME  |   session id
+  | <-- SCENE_BEGIN, MESH*, NODE*, SCENE_END   (full model, once)
+  | -- SCENE_READY ------------------> |
+  | == INPUT (UDP, every display frame) => |   poses, buttons, ack of the newest complete state frame
+  | <= STATE (UDP, every sim step) ======= |   what changed since the acked frame, haptics, latency echo
+  | <-- TEXT (when a cue changes)      |
+```
+
+The server learns the client's UDP address from its first `INPUT` datagram (matched by session id). A new
+`SCENE_BEGIN` at any time replaces the scene.
+
+## Frames and coordinate spaces
+
+* **Scene space**: the simulator's world frame. `SCENE_BEGIN` says which axis is up and gives the bounds.
+* **Stage space**: the room (OpenXR `STAGE`: y up, origin on the floor).
+* **Placement**: where the client draws the scene in the room; the user changes it in the app (move, turn, scale).
+  `p_stage = place_pos + place_scale * rotate(place_quat, p_scene)`.
+
+Controller poses in `INPUT` are in stage space, together with the current placement, so the server can convert them
+to scene space (`InputFrame.hand_in_scene`). A scene drawn at twice its size therefore halves the hand motion in
+simulator units.
+
+## Datagrams
+
+Header (8 bytes): `u16 magic = 0x5451 ("QT")`, `u8 version = 1`, `u8 type`, `u32 session`.
+
+| Type | Name | Payload |
+|---|---|---|
+| 1 | DISCOVER | none (session 0) |
+| 2 | OFFER | `u16 tcp_port`, `str server_name` |
+| 3 | INPUT | below (292 bytes with the header) |
+| 4 | STATE | below (at most 1200 bytes with the header) |
+
+### INPUT (client to server, every display frame)
+
+```
+u32 seq                 u64 client_time_us          u32 ack_frame     u16 ack_scene
+u16 flags               bit0 edit mode (user is placing the scene: ignore the controls)
+                        bit1 session focused (headset worn)   bit2 passthrough on
+u32 latency_us          the client's last measured echo latency (0 = none yet)
+f32 place_pos[3]        f32 place_quat[4]           f32 place_scale
+f32 head_pos[3]         f32 head_quat[4]
+2 x hand (0 = left, 1 = right), 100 bytes each:
+    u16 flags           bit0 active  bit1 grip pose valid  bit2 aim pose valid  bit3 tracked
+    u16 buttons         bit0 primary (X / A)  bit1 secondary (Y / B)  bit2 thumbstick click  bit3 menu
+                        bit4 trigger touch  bit5 thumbstick touch  bit6 primary touch  bit7 secondary touch
+                        bit8 thumbrest touch
+    f32 trigger         f32 squeeze                 f32 stick[2]
+    f32 grip_pos[3]     f32 grip_quat[4]            f32 aim_pos[3]    f32 aim_quat[4]
+    f32 velocity[3]     f32 angular_velocity[3]     (grip, stage space)
+```
+
+`ack_frame` is the newest state frame of scene `ack_scene` of which the client received every fragment before any
+fragment of a newer frame.
+
+### STATE (server to client, every simulation step)
+
+A frame is split into 1 to 255 datagrams. Each datagram is decodable alone.
+
+```
+u16 scene_id            u32 frame                   u8 frag_index     u8 frag_count
+u64 server_time_us
+u32 echo_input_seq      u64 echo_client_time_us     the INPUT sample this state results from
+u32 echo_hold_us        time between receiving that input and sending this frame (simulation + wait)
+2 x haptic (left, right): u16 seq, u8 amplitude (0..255), u8 reserved, u16 duration_ms, u16 frequency_hz
+chunks until the end of the datagram
+```
+
+Chunk header: `u8 type`, `u8 reserved`, `u16 node`.
+
+| Type | Name | Body |
+|---|---|---|
+| 1 | POSE | `u16 pos[3]`, `i16 quat3[3]`, `i16 dropped` |
+| 2 | VERTS | `u16 first`, `u16 count`, `count x u16[3]` |
+| 3 | APPEARANCE | `u8 rgba[4]`, `u16 node_flags`, `u16 reserved` |
+
+* **Position quantisation**: `u16 = round((p - bounds_min) / (bounds_max - bounds_min) * 65535)` per axis. For nodes
+  whose parent is the scene the bounds are the scene bounds (a 2 m scene gives 0.03 mm steps); for nodes attached
+  to the head, a hand or the stage the bounds are -2 m .. +2 m.
+* **Rotation quantisation** ("smallest three"): the quaternion is sign-flipped so that its largest-magnitude
+  component is positive; that component's index (0..3 in xyzw order) is `dropped`; the other three, in xyzw order,
+  are stored as `round(c * 32767 * sqrt(2))`. Error below 1e-4 rad.
+* **VERTS** carries a run of a DEFORM node's vertices or a TUBE node's points.
+
+**What a frame contains (the delta scheme).** The server remembers, for every pose, every vertex and every
+appearance, the frame in which its quantised value last changed. A frame for a client contains every item that
+changed after the frame that client last acknowledged. So:
+
+* things that do not move cost nothing;
+* a lost datagram is repaired by the next frame automatically (the ack does not advance, so the items are sent
+  again with their current values), without retransmission timers;
+* values are always absolute, never differences, so there is no error accumulation and no dependency chain.
+
+A client drops datagrams of frames older than the newest frame it has seen, and applies everything else
+immediately (also from incomplete frames).
+
+**Haptics.** The haptic fields are state, not events: they travel in every datagram. The client plays a vibration
+when `seq` differs from the last one it played. Amplitude 0 stops the vibration. Quest 2 controllers ignore the
+frequency.
+
+**Latency echo.** `now - echo_client_time_us` on the client is the time from sampling the controllers to having the
+resulting simulator state in hand; the client reports it back in `INPUT.latency_us`. It excludes the display's own
+scan-out (about one refresh).
+
+## TCP messages
+
+Framing: `u32 length`, `u16 type`, payload; `length` counts the type and the payload.
+
+| Type | Name | Direction | Payload |
+|---|---|---|---|
+| 1 | HELLO | C to S | `u16 magic`, `u16 version`, `u16 flags` (bit0 TCP only), `f32 display_hz`, `str client_name`, `str device` |
+| 2 | WELCOME | S to C | `u16 version`, `u16 flags`, `u32 session`, `u16 udp_port`, `f32 state_hz`, `str server_name` |
+| 3 | SCENE_BEGIN | S to C | `u16 scene_id`, `u8 up_axis` (0 x, 1 y, 2 z), `u8 reserved`, `f32 bounds_min[3]`, `f32 bounds_max[3]`, `f32 focus_center[3]`, `f32 focus_radius`, `f32 view_dir[3]`, `u16 mesh_count`, `u16 node_count`, `str name` |
+| 4 | MESH | S to C | below |
+| 5 | NODE | S to C | below |
+| 6 | SCENE_END | S to C | `u16 scene_id` |
+| 7 | SCENE_READY | C to S | `u16 scene_id` |
+| 8 | TEXT | S to C | `u8 slot`, `u8 anchor`, `u16 reserved`, `u8 rgba[4]`, `f32 size`, `f32 pos[3]`, `u32 ttl_ms`, `str text` |
+| 9 | DGRAM | both | one datagram including its header (TCP-only mode) |
+| 10 | PING | C to S | `u64 t` |
+| 11 | PONG | S to C | `u64 t` (echo), `u64 server_time_us` |
+| 12 | BYE | both | `str reason` (optional) |
+| 13 | PANEL | S to C | below |
+| 14 | ACTION | C to S | `u16 action_id`: the operator pressed that action's button |
+
+`focus_center` / `focus_radius` describe the region the operator works in; the client uses them for the first
+placement (the region is put in front of the user at a comfortable size). `view_dir` is the horizontal direction,
+in scene coordinates, the operator should look along at the start (zero: no preference).
+
+### MESH
+
+```
+u16 mesh_id             u16 flags       bit0 normals  bit1 vertex colours  bit2 32-bit indices  bit3 double sided
+u32 vertex_count        u32 index_count
+f32 aabb_min[3]         f32 aabb_max[3]
+u32 raw_size
+zlib-deflated block of raw_size bytes:
+    u16 position[3] x vertex_count          quantised inside the AABB
+    i8  normal[4]   x vertex_count          if bit0 (xyz * 127, 4th byte unused)
+    u8  rgba[4]     x vertex_count          if bit1
+    u16 or u32 index x index_count          triangles
+```
+
+Without normals the client shades with the triangle normals.
+
+### NODE
+
+```
+u16 node_id             u8 kind         1 MESH (rigid)  2 DEFORM (streamed vertices)  3 TUBE (streamed polyline)
+u8 parent               0 scene  1 stage  2 head  3 left grip  4 right grip  5 left aim  6 right aim
+u16 mesh_id (0xFFFF none)
+u16 flags               bit0 visible  bit1 blend (use alpha)  bit2 unlit  bit3 on top (no depth test)  bit4 flat
+                        bit5 highlight (accent rim)
+u8 rgba[4]              multiplies the mesh colours
+f32 pos[3]              f32 quat[4]     f32 scale[3]
+f32 param               TUBE: radius
+u16 point_count         TUBE: number of points, followed by f32[3] x point_count
+str name
+```
+
+Node ids are dense, 0 .. node_count - 1, and messages arrive in id order. Nodes attached to a hand or the head move
+with it on the client without any network delay: use them for cues that must stick to the controller.
+
+### TEXT
+
+`anchor` 0: head-locked panel 1 m in front of the eyes, `pos` is the offset on it. `anchor` 1 + parent: at `pos` in
+that frame, turned toward the viewer. `size` is the line height in metres. `ttl_ms` 0: until the slot is replaced;
+an empty string clears the slot. Lines are separated by `\n`.
+
+### PANEL
+
+The server's control panel: what is running, its state, and the actions the operator can trigger. The client lays it
+out in its own style (a card on the wrist, a menu) and answers with ACTION. Send it again whenever it changes.
+
+```
+str title               str subtitle            str host ("computer name  address")
+u8 status_style         0 none  1 recording  2 caution  3 ok          str status_text
+u8 row_count, each:     u8 style (0 normal, 1 accent, 2 caution, 3 failure; bit 7: also on the wrist card),
+                        str label, str value
+u8 action_count, each:  u16 id, u8 style (0 normal, 1 primary, 2 danger),
+                        u8 flags (bit 0 enabled, bit 1 hold to confirm, bit 2 active), str label, str hint
+u8 legend_count, each:  str key, str text
+```
+
+Role tokens in any of these strings are replaced by the client, so the text stays right when the user swaps hands
+in the settings: `$R` / `$L` = "Right" / "Left" (the controller in that role), `$Rp` `$Rs` `$Lp` `$Ls` = that
+controller's primary / secondary button (A, B, X, Y). With "left-handed" on, the client also swaps the two hands in
+INPUT and the two haptic channels, so the server needs no special handling.
+
+Node flag bit 5 (`F_HIGHLIGHT`, 32) draws a node with an accent rim (e.g. the tool that is following the hand).
+
+## Cues are ordinary nodes
+
+The protocol has no special cue messages. The "go back to the robot" cue (`server/quest_teleop/cues.py`) is three
+nodes that the server shows and hides (a see-through shell at the robot's real tool pose, a marker at the pose the
+hand asks for, a line between them) plus one TEXT. Any other cue can be built the same way.
+
+## Size of the traffic
+
+* INPUT: 292 bytes x display rate (72 Hz: 168 kbit/s).
+* STATE: 56 bytes of headers per datagram, 18 bytes per moving rigid body, 6 bytes per moving vertex or tube point,
+  8 extra bytes per run of vertices.
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/measurements.md -->
+
+# Measurements
+
+This page is [`docs/MEASUREMENTS.md`](https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/MEASUREMENTS.md) from the repository.
+
+"Latency" is the protocol's echo latency: from the moment the client samples the controllers to the moment it holds
+the simulator state that resulted from that sample. The client measures it and reports it back every frame; the
+status page splits it into its parts. It includes the wait for the next simulation step and the step itself, and
+excludes the display's own scan-out (about one refresh, 13.9 ms at 72 Hz).
+
+## Loopback, bundled demo (no headset)
+
+`quest_teleop.probe` against `quest_teleop.demo`. Scene: 17 nodes, 7 meshes, one 196-vertex cloth, one 40-point
+rope. Definition: 10 kB, loaded in 1 ms. Client input at 72 Hz.
+
+| Case | State rate | Down | Up | Datagrams / frame | Latency median / p95 / max | Server hold median |
+|---|---|---|---|---|---|---|
+| right hand moving, UDP | 60 Hz | 0.23 Mbit/s | 168 kbit/s | 1.07 | 8.4 / 14.6 / 14.9 ms | 8.2 ms |
+| cloth and rope settling, hands still | 60 Hz | 0.32 Mbit/s | 168 kbit/s | 1.01 | 8.4 / 14.7 / 15.3 ms | 8.3 ms |
+| right hand moving, UDP | 120 Hz | 0.28 Mbit/s | 168 kbit/s | 1.00 | 8.0 / 12.6 / 13.4 ms | 7.9 ms |
+| right hand moving, TCP-only mode | 60 Hz | 0.35 Mbit/s | 168 kbit/s | 1.12 | 6.4 / 12.6 / 16.2 ms | 6.2 ms |
+
+No frame was lost in any run. Almost all of the latency is the server hold: an input waits on average half a
+simulation period for the next step, plus the step time. The network and the encoding add about 0.1 ms on loopback.
+With 30 % of the state datagrams dropped on purpose the client's state still converges to the server's, without
+retransmission (`tests/test_loopback.py`).
+
+## Loopback, a larger scene
+
+A robot arm with a gripper, rigid parts, two deformable meshes and a 268-node rope from a GPU physics simulator:
+40 nodes, 33 meshes, 81,901 triangles, 2,051 streamed points.
+
+| | |
+|---|---|
+| Scene definition | 689 kB on the wire, decoded by the Python probe in 5 ms |
+| State frame while things move | 3.6 kB in 3.7 datagrams (1.5 Mbit/s at 50 Hz), with a 0.05 mm vertex dead band |
+| Server cost per frame (quantise, diff, encode, send) plus the application's own logic | 0.8 ms median |
+
+## Quest 2
+
+Quest 2, system software v209 (Android 14), 72 Hz, passthrough on. The headset app ran on the first install: OpenXR
+session, 1440 x 1584 sRGB swapchains with 4x MSAA, Touch controller bindings, passthrough layer; 72 / 72 frames per
+second with no stale frames, application GPU time 6.4 ms (before shadows were added; not re-measured since).
+
+| Scene | Link | Latency median / p95 / max | Down | Up |
+|---|---|---|---|---|
+| demo, 60 Hz | USB (`adb reverse`, TCP tunnel) | 13.9 / 27.9 / 28.2 ms | 0.35-0.6 Mbit/s moving | 168 kbit/s |
+| demo, 60 Hz | Wi-Fi (UDP), computer also on Wi-Fi | 14.1 / 28.2 / 30-42 ms | same | 168 kbit/s |
+| larger scene, simulator at about half real time (26 steps/s) | USB | 56 / 56-70 ms | 0.1-0.6 Mbit/s | 168 kbit/s |
+| larger scene, same | Wi-Fi (UDP) | 56 / 69 ms | 0.1 Mbit/s idle | 168 kbit/s |
+
+Latency on the headset is quantised to display frames (13.9 ms). With a slow simulator the latency is the simulator
+step plus one to two display frames. Wi-Fi costs nothing at the median; now and then a frame arrives one or two
+display frames late.
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/troubleshooting.md -->
+
+# Troubleshooting
+
+Problems by symptom. The app's log is `adb logcat -s quest-teleop`; the server prints what it does with the prefix
+`[quest-teleop]`.
+
+## The headset does not appear in `adb devices`
+
+* **Nothing listed.** Put the headset on: there is a **"USB detected"** notification to tap and allow. Until it is
+  accepted the headset is not visible to adb. If there is no notification, try another cable (many USB-C cables only
+  charge) or another port, and check that developer mode is on ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#1-developer-mode-once-person)).
+* **`unauthorized`.** Accept **"Allow USB debugging"** in the headset, with "Always allow from this computer" ticked.
+  If the prompt does not come back: `adb kill-server`, replug, put the headset on.
+* **`no permissions` (Linux).** Add the udev rule for vendor id `2833`
+  ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#udev-rule-on-linux-root)), then replug.
+* **The headset starts Quest Link when plugged in.** Turn "Link auto connect" (or "Turn on Link") off.
+* **`adb: command not found`.** It is in `~/android-sdk/platform-tools/`; add that to `PATH`.
+
+## Building the APK fails
+
+* **`missing ...: run android/setup_toolchain.sh`.** The toolchain is not installed, or it is in a different
+  folder: set `ANDROID_HOME` to the same value for both scripts.
+* **`sdkmanager` or `apksigner` fails with a Java error.** Install a Java runtime, version 17 or newer.
+* **CMake cannot find a build program.** Install `make`.
+
+## The app does not find the server (Wi-Fi)
+
+The app shows "Looking for a server on this network". Check, in this order:
+
+1. The server is running and printed `listening on 0.0.0.0:47800`.
+2. The computer's firewall allows **TCP 47800 and UDP 47800-47801** ([Quest 2 setup](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#5-network-wi-fi)).
+   This is the most common cause.
+3. Headset and computer are on the same network: not a guest network, no client / AP isolation, no VPN on the
+   computer that captures the local traffic.
+4. Some routers drop broadcasts. Give the address explicitly:
+   `adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity --es server <computer's address>`
+   (the server prints its addresses at start).
+5. Or use the cable: `adb reverse tcp:47800 tcp:47800` ([USB link](https://entangledquantum.github.io/quest-teleop/docs/quest-setup.md#6-network-usb-cable-instead-of-wi-fi)).
+
+## The app does not find the server (USB)
+
+* Run `adb reverse tcp:47800 tcp:47800` again: it is lost when the cable is replugged or the adb server restarts.
+  `adb reverse --list` shows the active forwards.
+* If the server uses another port, forward that port: `adb reverse tcp:<port> tcp:<port>`, and start the app with
+  `--es server 127.0.0.1:<port>`.
+
+## Connected, but nothing moves
+
+* `get_input()` returns `None` while the headset is not worn (the app sends no input without focus) and for 0.5 s
+  after the last sample.
+* While the headset menu is open, `InputFrame.edit_mode` is `True`: your code should ignore the controls then (the
+  demo does). Close the menu with the left menu button.
+* `Hand.active` is `False` while a controller is not tracked (asleep, out of view).
+* Positions outside the scene bounds are clamped: make `bounds_min` / `bounds_max` contain everything that moves.
+* Call `publish()` every step; nothing is sent otherwise.
+
+## The scene is too big, too small or in the wrong place
+
+Give `focus_center`, `focus_radius` (and `view_dir`) to `Scene`: the headset uses them to place and size the working
+area. In the headset, open the menu and use the grips and sticks to place and scale it, or press "Reset placement".
+
+## High latency
+
+* Pass the input to `publish(echo=inp)` and call `note_timing`, then look at the status page's latency breakdown.
+* "Wait for the step" and "simulator step" are your loop: with a slow simulator the latency is about the step time
+  plus one to two display frames ([Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md)).
+* On Wi-Fi, use 5 GHz and keep the computer on a cable to the router if you can, or use the USB link.
+
+## The status page does not open
+
+* It listens on `127.0.0.1:8800` by default: open it on the same computer. For another machine, start it with
+  `host="0.0.0.0"` (it has no login).
+* Port 8800 already in use: `StatusPage(srv, port=8801)` or `quest-teleop-demo --status-port 8801`.
+* The Recordings section is empty: pass `recordings_dir=rec.root`.
+
+## The desktop client does not start
+
+* `no X display: use --offscreen`: it needs an X11 display (`DISPLAY` set).
+* Build errors about X11, EGL or zlib: install the development packages
+  ([Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#3-the-desktop-client-optional)).
+
+
+---
+
+<!-- page: https://entangledquantum.github.io/quest-teleop/docs/faq.md -->
+
+# FAQ
+
+## Which headsets work?
+
+It is built and measured on a **Meta Quest 2**. The app is plain OpenXR with Touch controller bindings, and its
+manifest lists Quest 2, Quest Pro, Quest 3 and Quest 3S as supported devices; only the Quest 2 has been measured
+([Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md)).
+
+## Do I need Unity, Unreal, Android Studio or Gradle?
+
+No. The headset app is about 1 MB of C++ (OpenXR, EGL, OpenGL ES 3, one `NativeActivity`, no Java), built by two
+shell scripts with the NDK, CMake and the Android build tools.
+
+## Does it need Quest Link, Air Link or a PC VR runtime?
+
+No. The app runs standalone on the headset and talks to your Python program over the local network or a USB
+cable. Turn "Link auto connect" off so the headset does not start Link when the cable is plugged in.
+
+## Is the Python library tied to a simulator or robot?
+
+No. It streams meshes, poses, deforming meshes and polylines that you set every step, and gives you controller
+poses and buttons. The demo uses a small numpy mock world; any simulator or robot driver that runs in, or can talk
+to, a Python process works.
+
+## Which operating systems are supported?
+
+The build scripts (`android/setup_toolchain.sh`, `android/build_apk.sh`) and the desktop client are for Linux. The
+Python library uses only the standard library and numpy; these pages assume Linux and do not cover other systems.
+
+## How do I install the Python library?
+
+From GitHub: `pip install git+https://github.com/EntangledQuantum/quest-teleop`
+([Install](https://entangledquantum.github.io/quest-teleop/docs/install.md#1-the-python-library)).
+
+## Wi-Fi or USB?
+
+Both work. On a Quest 2 the median latency is the same (about 14 ms with the demo); Wi-Fi occasionally delivers a
+frame one or two display frames late. USB (`adb reverse`) needs no firewall change and no shared network.
+
+## How much bandwidth does it use?
+
+Controller input is 292 bytes per display frame (168 kbit/s at 72 Hz). The state stream sends only what changed:
+the demo uses 0.2 to 0.6 Mbit/s; a scene with 82,000 triangles and 2,000 streamed points about 1.5 Mbit/s at 50 Hz.
+
+## Can several headsets connect at once?
+
+Several clients can connect and all of them see the scene. The input of one of them drives the simulator: of those
+that are sending input, the one connected the longest (`TeleopServer.controller()`).
+
+## Can I write my own client or server?
+
+Yes. The [protocol](https://entangledquantum.github.io/quest-teleop/docs/protocol.md) is documented byte by byte, with reference implementations in Python
+(`server/quest_teleop/protocol.py`) and C++ (`client/core/protocol.h`), and a headless Python client
+(`quest_teleop.probe`).
+
+## Does it support hand tracking?
+
+No. It uses the Touch controllers; nothing needs hand tracking or standing.
+
+## What is recorded, and where?
+
+Tool poses, gripper openings and states, controllers, time, and any per-step data you add, one `.npz` per take in
+`~/teleop_recordings` (or `$TELEOP_DATA_DIR`). See [Recording takes](https://entangledquantum.github.io/quest-teleop/docs/recording.md).
+
+## Is anything sent to the internet?
+
+No. The server, the status page and the headset app talk only on your local network or USB cable. The status page
+loads nothing from the internet. Only `android/setup_toolchain.sh` downloads, from `dl.google.com` and
+`github.com/KhronosGroup`.
+
+## Licence?
+
+MIT. Third-party parts: the Khronos OpenXR loader (Apache-2.0 / MIT, downloaded at build time and shipped in the
+APK), the Android NDK's `native_app_glue` (Apache-2.0), zlib, and the fonts Host Grotesk and Martian Mono (SIL Open
+Font License 1.1).

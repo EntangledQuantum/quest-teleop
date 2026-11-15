@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Use it with your own simulator · quest-teleop docs</title>
+<meta name="description" content="The Python API: Scene, TeleopServer, controller input, haptics, text cues, the headset panel and actions, safe hand-to-tool mapping, the go-back cue, latency measurement.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/library.html">
+<link rel="alternate" type="text/markdown" href="library.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html" aria-current="page">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="use-it-with-your-own-simulator">Use it with your own simulator</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#the-loop">The loop</a></li><li><a href="#a-complete-example">A complete example</a></li><li><a href="#coordinates">Coordinates</a></li><li><a href="#scene">Scene</a></li><li><a href="#teleopserver">TeleopServer</a></li><li><a href="#input">Input</a></li><li><a href="#haptics">Haptics</a></li><li><a href="#text-cues">Text cues</a></li><li><a href="#panel-and-actions">Panel and actions</a></li><li><a href="#safe-hand-to-tool-mapping">Safe hand-to-tool mapping</a></li><li><a href="#latency-measurement">Latency measurement</a></li></ol></nav>
+<p>The Python library is the computer side. Your program owns the simulator (or the robot driver); quest-teleop streams what it should look like to the headset and hands back the controllers. Nothing in the library or the app is specific to a task: you describe the scene with meshes and poses, and the panel with rows and buttons.</p>
+<h2 id="the-loop">The loop <a class="anchor" href="#the-loop" aria-label="Link to this section">#</a></h2>
+<p>Every application has the same shape:</p>
+<ol><li>Build a <code>Scene</code>: meshes, and nodes that place them.</li><li>Start a <code>TeleopServer</code> and give it the scene.</li><li>Every simulation step: read the newest controller sample (<code>get_input</code>), step your simulator with it, write the new poses and vertices into the scene, and call <code>publish</code>.</li></ol>
+<p><code>publish</code> sends each connected client only what changed since the frame it last acknowledged, so things that do not move cost nothing. It runs in your thread and never blocks on the network.</p>
+<h2 id="a-complete-example">A complete example <a class="anchor" href="#a-complete-example" aria-label="Link to this section">#</a></h2>
+<p>A box that follows the right controller while its grip button is held, with a vibration when the grip closes and a panel button that resets the box. Run it, then connect the headset, the desktop client or the probe (<a href="quick-start.html#2-connect-a-client">Quick start</a>).</p>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">"""A box that follows the right controller while its grip button is held."""
+import time
+
+import numpy as np
+from quest_teleop import Action, Panel, Row, Scene, TeleopServer
+from quest_teleop.scene import box_mesh
+
+scene = Scene("my sim", bounds_min=(-1, -1, 0), bounds_max=(1, 1, 2), up_axis=2,
+              focus_center=(0, 0, 0.3), focus_radius=0.4)
+v, f, n = box_mesh(half=(0.03, 0.03, 0.03))
+box = scene.add_node("box", scene.add_mesh(v, f, n), pos=(0, 0, 0.3), color=(0.55, 0.56, 1.0, 1))
+
+srv = TeleopServer(name="my sim").start()
+srv.set_scene(scene)
+
+box_pos = np.array([0.0, 0.0, 0.3])
+offset = None                                   # box position minus hand position while the grip is held
+held_before = False
+try:
+    while True:
+        inp = srv.get_input()                   # newest controller sample, or None
+        right = inp.hands[1] if inp is not None else None
+        held = bool(inp is not None and not inp.edit_mode and right.active and right.squeeze &gt; 0.5)
+        if held:
+            hand_pos, hand_quat = inp.hand_in_scene(1)   # right controller in scene coordinates
+            if not held_before:
+                offset = box_pos - hand_pos
+                srv.haptic(1, amplitude=0.5, duration=0.03)
+            box_pos = hand_pos + offset
+        held_before = held
+        scene.set_pose(box, box_pos, (0, 0, 0, 1))
+
+        panel = Panel(title="My sim", subtitle="one box")
+        panel.status("ok" if held else "none", "Moving the box" if held else "Hold the right grip")
+        panel.rows = [Row("BOX Z", f"{box_pos[2]:.2f} m", wrist=True)]
+        panel.actions = [Action(1, "Reset the box", style="primary")]
+        panel.legend = [("$R GRIP (HOLD)", "move the box")]
+        srv.set_panel(panel)                    # nothing is sent when nothing changed
+        if 1 in srv.pop_actions():
+            box_pos = np.array([0.0, 0.0, 0.3])
+            srv.set_text(1, "Box reset", ttl=1.5)
+
+        srv.publish(echo=inp)                   # sends only what changed; echo gives the latency measurement
+        time.sleep(1 / 60)
+except KeyboardInterrupt:
+    srv.stop()</code></pre></div>
+<p>The bundled demo (<code>server/quest_teleop/demo.py</code>, about 400 lines) is the full version: two grippers with <code>ToolTeleop</code>, <code>RateGripper</code>, <code>ContactHaptics</code> and <code>GoBackCue</code>, recording and the status page.</p>
+<h2 id="coordinates">Coordinates <a class="anchor" href="#coordinates" aria-label="Link to this section">#</a></h2>
+<ul><li><strong>Scene space</strong> is your simulator's world frame, in metres. <code>up_axis</code> says which axis is up (0 x, 1 y, 2 z). Quaternions are always <code>x y z w</code>.</li><li>The headset draws the scene somewhere in the room and the user can move, turn and scale it. Controller poses arrive in the room's frame together with that placement; <code>InputFrame.hand_in_scene(i)</code> converts them to scene space for you. A scene drawn at twice its size halves the hand motion in simulator units.</li><li>Positions are sent as 16-bit values over the scene bounds, so <strong>the bounds must contain everything that moves</strong> (values outside are clamped). A 2 m scene gives 0.03 mm steps.</li></ul>
+<h2 id="scene">Scene <a class="anchor" href="#scene" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import Scene
+scene = Scene(name="scene", bounds_min=(-1, -1, -1), bounds_max=(1, 1, 1), up_axis=2,
+              focus_center=None, focus_radius=None, view_dir=(0, 0, 0))</code></pre></div>
+<p><code>focus_center</code> and <code>focus_radius</code> describe the region the operator works in: the headset puts it in front of the user at a comfortable size when the scene loads. <code>view_dir</code> is the horizontal direction, in scene coordinates, the operator should look along at the start (zero: no preference).</p>
+<div class="table"><table><thead><tr><th scope="col">Method</th><th scope="col">What it does</th></tr></thead><tbody><tr><td><code>add_mesh(vertices, faces, normals=None, colors=None, double_sided=False)</code></td><td>a mesh (sent once); returns its id. <code>vertices</code> (V, 3), <code>faces</code> (F, 3) ints, <code>normals</code> (V, 3), <code>colors</code> (V, 3 or 4) in 0..1</td></tr><tr><td><code>add_node(name, mesh, pos=(0,0,0), quat=(0,0,0,1), scale=1.0, color=(1,1,1,1), parent=P_SCENE, flags=F_VISIBLE)</code></td><td>a rigid node that draws a mesh; returns its id. <code>color</code> multiplies the mesh colours; alpha below 1 draws it blended</td></tr><tr><td><code>add_deform(name, vertices, faces, color=..., colors=None, parent=P_SCENE, flags=F_VISIBLE, double_sided=True)</code></td><td>a mesh whose vertex positions you stream (cloth, soft bodies); at most 65535 vertices</td></tr><tr><td><code>add_tube(name, points, radius, color=..., parent=P_SCENE, flags=F_VISIBLE)</code></td><td>a polyline of fixed point count drawn as a tube (rope, cable, pointer line)</td></tr><tr><td><code>set_pose(node, pos=None, quat=None)</code></td><td>move a node</td></tr><tr><td><code>set_poses(nodes, pos, quat)</code></td><td>move many nodes at once (arrays)</td></tr><tr><td><code>set_points(node, points)</code></td><td>new vertex positions of a deform node, or new points of a tube</td></tr><tr><td><code>set_visible(node, visible)</code></td><td>show or hide a node</td></tr><tr><td><code>set_color(node, color)</code></td><td>change a node's colour</td></tr><tr><td><code>vertex_deadband</code></td><td>attribute, metres: streamed vertices are re-sent only when they moved more than this (default 0). A few hundredths of a millimetre stops solver jitter in resting cloth from being streamed</td></tr></tbody></table></div>
+<p>Mesh helpers in <code>quest_teleop.scene</code> return <code>(vertices, faces, normals)</code>: <code>box_mesh(half=(0.5, 0.5, 0.5))</code>, <code>sphere_mesh(radius=0.5, rings=12, sectors=20)</code>, <code>cylinder_mesh(radius=0.5, half_height=0.5, sectors=20, cap_round=False)</code>.</p>
+<p><strong>Parents.</strong> A node's pose is given in its parent's frame. Nodes attached to the head or a controller move with it on the headset with no network delay; use them for cues that must stick to the hand. Constants in <code>quest_teleop.protocol</code>:</p>
+<div class="table"><table><thead><tr><th scope="col">Constant</th><th scope="col">Frame</th></tr></thead><tbody><tr><td><code>P_SCENE</code></td><td>the scene (default)</td></tr><tr><td><code>P_STAGE</code></td><td>the room (y up, origin on the floor)</td></tr><tr><td><code>P_HEAD</code></td><td>the head</td></tr><tr><td><code>P_LEFT_GRIP</code>, <code>P_RIGHT_GRIP</code></td><td>a controller's grip pose</td></tr><tr><td><code>P_LEFT_AIM</code>, <code>P_RIGHT_AIM</code></td><td>a controller's pointing ray</td></tr></tbody></table></div>
+<p><strong>Flags</strong> (combine with <code>|</code>): <code>F_VISIBLE</code>, <code>F_BLEND</code> (use alpha), <code>F_UNLIT</code>, <code>F_ON_TOP</code> (no depth test), <code>F_FLAT</code> (flat shading), <code>F_HIGHLIGHT</code> (accent rim, e.g. the tool that is following the hand).</p>
+<p>Adding meshes or nodes after <code>set_scene</code> is allowed: the next <code>publish</code> notices and every client reloads the scene. Calling <code>set_scene</code> with another <code>Scene</code> replaces it.</p>
+<h2 id="teleopserver">TeleopServer <a class="anchor" href="#teleopserver" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import TeleopServer
+srv = TeleopServer(name="quest-teleop server", port=47800, bind="0.0.0.0", beacon=True, state_hz=60.0,
+                   verbose=True).start()</code></pre></div>
+<p><code>beacon=True</code> announces the server by UDP broadcast on port 47801 once per second, so the headset finds it. <code>state_hz</code> is what the server tells clients its state rate is; the actual rate is how often you call <code>publish</code>.</p>
+<div class="table"><table><thead><tr><th scope="col">Method</th><th scope="col">What it does</th></tr></thead><tbody><tr><td><code>start()</code></td><td>open the sockets and threads; returns the server</td></tr><tr><td><code>stop()</code></td><td>say goodbye to the clients and close everything</td></tr><tr><td><code>set_scene(scene)</code></td><td>stream this scene; every client (re)loads it</td></tr><tr><td><code>get_input(max_age=0.5)</code></td><td>the newest <code>InputFrame</code> of the controlling client, or <code>None</code> (no client, headset not worn, or older than <code>max_age</code> seconds)</td></tr><tr><td><code>publish(echo=None)</code></td><td>send one state frame. Pass the <code>InputFrame</code> this state results from as <code>echo</code> to get the latency measurement. Returns bytes sent</td></tr><tr><td><code>haptic(hand, amplitude, duration=0.02, frequency=0.0)</code></td><td>vibrate controller <code>hand</code> (0 left, 1 right); amplitude 0..1, duration in seconds. Quest 2 controllers ignore the frequency</td></tr><tr><td><code>set_text(slot, text, anchor=TEXT_HUD, pos=(0,0,0), size=0.03, color=(1,1,1,1), ttl=0.0)</code></td><td>show text in slot 0..255; an empty string clears the slot</td></tr><tr><td><code>set_panel(panel)</code></td><td>show or update the control panel; cheap to call every step</td></tr><tr><td><code>pop_actions()</code></td><td>ids of the panel buttons pressed since the last call</td></tr><tr><td><code>note_timing(step_s, processing_s)</code></td><td>report how long the simulator step and the rest of your work took (for the status page's latency breakdown)</td></tr><tr><td><code>monitor()</code></td><td>everything a status display needs (clients, rates, loss, latency parts); used by the status page</td></tr><tr><td><code>pop_stats()</code></td><td>traffic and the client's latency since the last call</td></tr><tr><td><code>clients()</code>, <code>controller()</code>, <code>n_clients</code></td><td>connected clients; the one whose input drives the simulator (the longest-connected one that is sending input)</td></tr><tr><td><code>on_connect</code>, <code>on_disconnect</code></td><td>attributes: set to a function <code>f(client)</code> to be called</td></tr></tbody></table></div>
+<h2 id="input">Input <a class="anchor" href="#input" aria-label="Link to this section">#</a></h2>
+<p><code>get_input()</code> returns an <code>InputFrame</code> (or <code>None</code>):</p>
+<div class="table"><table><thead><tr><th scope="col">Field</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>hands</code></td><td><code>(left, right)</code>, two <code>Hand</code> objects</td></tr><tr><td><code>edit_mode</code></td><td><code>True</code> while the user has the headset menu open or is placing the scene: <strong>ignore the controls and hold the robot</strong></td></tr><tr><td><code>hand_in_scene(i, aim=False)</code></td><td><code>(pos, quat)</code> of controller <code>i</code> in scene coordinates; <code>aim=True</code> gives the pointing ray instead of the grip</td></tr><tr><td><code>scene_pose(pos, quat)</code></td><td>convert any room-space pose to scene space</td></tr><tr><td><code>head_pos</code>, <code>head_quat</code></td><td>the head, room space</td></tr><tr><td><code>place_pos</code>, <code>place_quat</code>, <code>place_scale</code></td><td>where the scene is drawn in the room</td></tr><tr><td><code>flags</code></td><td>bit <code>IF_FOCUSED</code>: the headset is worn and the app has focus; <code>IF_PASSTHROUGH</code>: passthrough is on</td></tr><tr><td><code>latency_us</code></td><td>the client's last measured latency</td></tr></tbody></table></div>
+<p>A <code>Hand</code>:</p>
+<div class="table"><table><thead><tr><th scope="col">Field</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>active</code></td><td>the controller is present and its grip pose is valid</td></tr><tr><td><code>trigger</code>, <code>squeeze</code></td><td>0..1 (index trigger, grip button)</td></tr><tr><td><code>stick</code></td><td>thumbstick x, y in -1..1</td></tr><tr><td><code>buttons</code>, <code>button(mask)</code></td><td>button bits: <code>B_PRIMARY</code> (A / X), <code>B_SECONDARY</code> (B / Y), <code>B_STICK</code>, <code>B_MENU</code>, and touch bits <code>B_TRIGGER_TOUCH</code>, <code>B_STICK_TOUCH</code>, <code>B_PRIMARY_TOUCH</code>, <code>B_SECONDARY_TOUCH</code>, <code>B_THUMBREST_TOUCH</code> (constants in <code>quest_teleop.protocol</code>)</td></tr><tr><td><code>grip_pos</code>, <code>grip_quat</code>, <code>aim_pos</code>, <code>aim_quat</code></td><td>raw poses in room space</td></tr><tr><td><code>vel</code>, <code>angvel</code></td><td>grip velocity and angular velocity, room space</td></tr></tbody></table></div>
+<p>The left menu button is used by the headset app itself (it opens the panel), so it is not a control for your application. When the user turns on "left-handed" in the headset settings, the app swaps the two hands in the input and the two haptic channels, so your code needs no special handling.</p>
+<h2 id="haptics">Haptics <a class="anchor" href="#haptics" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">srv.haptic(1, amplitude=0.6, duration=0.03)     # right controller, short tick
+srv.haptic(0, 0.0)                              # amplitude 0 stops the left one</code></pre></div>
+<p>The haptic command travels in every state datagram until it is replaced, so a lost datagram does not lose it. <code>ContactHaptics</code> turns a contact force into vibration: a strong short tick when contact starts, then an amplitude that follows the force.</p>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import ContactHaptics
+touch = ContactHaptics(f_min=0.3, f_max=15.0)   # force thresholds in N
+hp = touch.update(dt, force)                    # every step; returns (amplitude, duration) or None
+if hp:
+    srv.haptic(1, *hp)</code></pre></div>
+<h2 id="text-cues">Text cues <a class="anchor" href="#text-cues" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import protocol as P
+srv.set_text(0, "Recording", ttl=2.0)                                   # head-locked, for 2 s
+srv.set_text(1, "grasp here", anchor=1 + P.P_SCENE, pos=(0.4, 0, 0.3),  # in the scene, facing the viewer
+             size=0.02, color=(1, 0.85, 0.2, 1))
+srv.set_text(1, "")                                                     # clear slot 1</code></pre></div>
+<p><code>anchor=TEXT_HUD</code> (0) puts the text on a panel 1 m in front of the eyes, <code>pos</code> being the offset on it. <code>anchor=1 + parent</code> puts it at <code>pos</code> in that parent's frame (<code>P_SCENE</code>, <code>P_LEFT_GRIP</code>, ...). <code>size</code> is the line height in metres, <code>ttl</code> seconds (0: until replaced). Lines are separated by <code>\n</code>.</p>
+<p>Cues other than text are ordinary nodes: add them hidden and switch them with <code>set_visible</code>, <code>set_pose</code> and <code>set_color</code>. The go-back cue below is built that way.</p>
+<h2 id="panel-and-actions">Panel and actions <a class="anchor" href="#panel-and-actions" aria-label="Link to this section">#</a></h2>
+<p>The panel is what the headset shows on the wrist card and in the menu: a title, a status line, your rows, your buttons and a control legend. The headset lays it out; your code only describes it.</p>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import Action, Panel, Row
+
+panel = Panel(title="Pick and place", subtitle="simulator A, config B")
+panel.status("recording", "REC 00:12  take 3")          # style: none | recording | caution | ok
+panel.rows = [Row("RUN", "session-01", wrist=True),       # wrist=True: also on the wrist card
+              Row("SIM SPEED", "0.55x", style="caution")] # style: normal | accent | caution | failure
+panel.actions = [Action(1, "Stop recording", hint="$Rs", style="primary", active=True),
+                 Action(2, "Reset the scene", hint="hold", style="danger", confirm=True)]
+panel.legend = [("$R GRIP", "move the gripper"), ("$R TRIGGER", "close slowly")]
+srv.set_panel(panel)
+
+for action_id in srv.pop_actions():
+    ...</code></pre></div>
+<div class="table"><table><thead><tr><th scope="col"><code>Action</code> field</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>id</code></td><td>number returned by <code>pop_actions()</code></td></tr><tr><td><code>label</code>, <code>hint</code></td><td>button text; the hint (a shortcut) is printed at its right edge</td></tr><tr><td><code>style</code></td><td><code>normal</code>, <code>primary</code> or <code>danger</code></td></tr><tr><td><code>enabled</code></td><td>greyed out when <code>False</code></td></tr><tr><td><code>confirm</code></td><td>the user must hold the trigger on it for about a second</td></tr><tr><td><code>active</code></td><td>drawn as switched on</td></tr></tbody></table></div>
+<p><strong>Role tokens</strong> in any panel string are replaced on the headset, so the text stays right when the user swaps hands: <code>$R</code> / <code>$L</code> = "Right" / "Left" (the controller in that role), <code>$Rp</code>, <code>$Rs</code>, <code>$Lp</code>, <code>$Ls</code> = that controller's primary or secondary button (A, B, X, Y).</p>
+<h2 id="safe-hand-to-tool-mapping">Safe hand-to-tool mapping <a class="anchor" href="#safe-hand-to-tool-mapping" aria-label="Link to this section">#</a></h2>
+<p>For robots and grippers, <code>ToolTeleop</code> turns one controller into a tool-pose command that the robot can follow:</p>
+<ul><li>The user holds a clutch (the grip button) to move the tool. In <code>clutch</code> mode the tool follows the hand's motion relative to where the clutch was pressed; in <code>absolute</code> mode the tool goes where the hand is.</li><li>The command moves toward the hand at a bounded speed and never leads the measured tool by more than <code>max_lead</code>.</li><li>If the hand gets further from the measured tool than the tether (sudden move, joint limit, out of reach, blocked), tracking stops (state <code>lost</code>): the robot holds, and <code>out.cue</code> says to show where the tool really is. Tracking resumes when the hand is back near the tool.</li></ul>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import GoBackCue, RateGripper, TeleopCfg, ToolTeleop
+from quest_teleop import protocol as P
+
+teleop = ToolTeleop(TeleopCfg(mode="clutch", max_speed=0.25, tether=0.08))
+gripper = RateGripper(close_time=2.0, open_time=1.5)
+cue = GoBackCue(scene, "right", tool_mesh=None)          # adds its hidden nodes to the scene
+
+# every step, i = 1 for the right hand
+hand, clutch, trigger, open_btn = None, False, 0.0, False
+if inp is not None and not inp.edit_mode and inp.hands[i].active:
+    h = inp.hands[i]
+    hand, clutch, trigger, open_btn = inp.hand_in_scene(i), h.squeeze &gt; 0.5, h.trigger, h.button(P.B_PRIMARY)
+out = teleop.update(dt, hand, clutch, tool_pos, tool_quat, reachable=ik_ok)
+closure = gripper.update(dt, trigger, open_btn)          # 0 open .. 1 closed
+robot.command(out.cmd_pos, out.cmd_quat, closure)        # your robot or simulator
+cue.update(dt, out, tool_pos, tool_quat, srv)            # shows / hides the go-back cue and its text
+if out.lost_edge:
+    srv.haptic(i, 1.0, 0.12)</code></pre></div>
+<p><code>TeleopCfg</code> fields (defaults): <code>mode="clutch"</code>, <code>max_speed=0.25</code> m/s, <code>max_angular_speed=2.0</code> rad/s, <code>max_lead=0.03</code> m, <code>max_angular_lead=0.35</code> rad, <code>tether=0.08</code> m, <code>tether_angle=0.9</code> rad, <code>tether_time=0.25</code> s, <code>reengage=0.03</code> m, <code>reengage_angle=0.45</code> rad, <code>motion_scale=1.0</code>, <code>absolute_offset_pos</code>, <code>absolute_offset_quat</code>.</p>
+<p><code>update</code> returns a <code>TeleopOut</code> with <code>state</code> (<code>idle</code>, <code>tracking</code>, <code>lost</code>), <code>cmd_pos</code>, <code>cmd_quat</code>, <code>wish_pos</code>, <code>wish_quat</code> (where the hand asks the tool to be), <code>lag</code>, <code>lag_angle</code>, <code>cue</code>, <code>engaged_edge</code>, <code>lost_edge</code>.</p>
+<h2 id="latency-measurement">Latency measurement <a class="anchor" href="#latency-measurement" aria-label="Link to this section">#</a></h2>
+<p>Pass the input sample to <code>publish(echo=inp)</code>. The headset then measures the time from sampling the controllers to holding the state that resulted from that sample, and reports it back. To split it into parts on the status page, also report your timing:</p>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">inp = srv.get_input()
+t0 = time.perf_counter()
+step_simulator(inp)
+step = time.perf_counter() - t0
+srv.publish(echo=inp)
+srv.note_timing(step, time.perf_counter() - t0 - step)</code></pre></div>
+<p>Next: <a href="recording.html">Recording takes</a>.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="library.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/library.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="quick-start.html"><span class="label">Previous</span>Quick start</a><a class="pn next" href="recording.html"><span class="label">Next</span>Recording takes</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting · quest-teleop docs</title>
+<meta name="description" content="The headset does not appear in adb, the build fails, the app does not find the server, nothing moves, high latency, the status page does not open.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/troubleshooting.html">
+<link rel="alternate" type="text/markdown" href="troubleshooting.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html" aria-current="page">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="troubleshooting">Troubleshooting</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#the-headset-does-not-appear-in-adb-devices">The headset does not appear in adb devices</a></li><li><a href="#building-the-apk-fails">Building the APK fails</a></li><li><a href="#the-app-does-not-find-the-server-wi-fi">The app does not find the server (Wi-Fi)</a></li><li><a href="#the-app-does-not-find-the-server-usb">The app does not find the server (USB)</a></li><li><a href="#connected-but-nothing-moves">Connected, but nothing moves</a></li><li><a href="#the-scene-is-too-big-too-small-or-in-the-wrong-place">The scene is too big, too small or in the wrong place</a></li><li><a href="#high-latency">High latency</a></li><li><a href="#the-status-page-does-not-open">The status page does not open</a></li><li><a href="#the-desktop-client-does-not-start">The desktop client does not start</a></li></ol></nav>
+<p>Problems by symptom. The app's log is <code>adb logcat -s quest-teleop</code>; the server prints what it does with the prefix <code>[quest-teleop]</code>.</p>
+<h2 id="the-headset-does-not-appear-in-adb-devices">The headset does not appear in <code>adb devices</code> <a class="anchor" href="#the-headset-does-not-appear-in-adb-devices" aria-label="Link to this section">#</a></h2>
+<ul><li><strong>Nothing listed.</strong> Put the headset on: there is a <strong>"USB detected"</strong> notification to tap and allow. Until it is accepted the headset is not visible to adb. If there is no notification, try another cable (many USB-C cables only charge) or another port, and check that developer mode is on (<a href="quest-setup.html#1-developer-mode-once-person">Quest 2 setup</a>).</li><li><strong><code>unauthorized</code>.</strong> Accept <strong>"Allow USB debugging"</strong> in the headset, with "Always allow from this computer" ticked. If the prompt does not come back: <code>adb kill-server</code>, replug, put the headset on.</li><li><strong><code>no permissions</code> (Linux).</strong> Add the udev rule for vendor id <code>2833</code> (<a href="quest-setup.html#udev-rule-on-linux-root">Quest 2 setup</a>), then replug.</li><li><strong>The headset starts Quest Link when plugged in.</strong> Turn "Link auto connect" (or "Turn on Link") off.</li><li><strong><code>adb: command not found</code>.</strong> It is in <code>~/android-sdk/platform-tools/</code>; add that to <code>PATH</code>.</li></ul>
+<h2 id="building-the-apk-fails">Building the APK fails <a class="anchor" href="#building-the-apk-fails" aria-label="Link to this section">#</a></h2>
+<ul><li><strong><code>missing ...: run android/setup_toolchain.sh</code>.</strong> The toolchain is not installed, or it is in a different folder: set <code>ANDROID_HOME</code> to the same value for both scripts.</li><li><strong><code>sdkmanager</code> or <code>apksigner</code> fails with a Java error.</strong> Install a Java runtime, version 17 or newer.</li><li><strong>CMake cannot find a build program.</strong> Install <code>make</code>.</li></ul>
+<h2 id="the-app-does-not-find-the-server-wi-fi">The app does not find the server (Wi-Fi) <a class="anchor" href="#the-app-does-not-find-the-server-wi-fi" aria-label="Link to this section">#</a></h2>
+<p>The app shows "Looking for a server on this network". Check, in this order:</p>
+<ol><li>The server is running and printed <code>listening on 0.0.0.0:47800</code>.</li><li>The computer's firewall allows <strong>TCP 47800 and UDP 47800-47801</strong> (<a href="quest-setup.html#5-network-wi-fi">Quest 2 setup</a>). This is the most common cause.</li><li>Headset and computer are on the same network: not a guest network, no client / AP isolation, no VPN on the computer that captures the local traffic.</li><li>Some routers drop broadcasts. Give the address explicitly: <code>adb shell am start -n com.entangledquantum.questteleop/android.app.NativeActivity --es server &lt;computer's address&gt;</code> (the server prints its addresses at start).</li><li>Or use the cable: <code>adb reverse tcp:47800 tcp:47800</code> (<a href="quest-setup.html#6-network-usb-cable-instead-of-wi-fi">USB link</a>).</li></ol>
+<h2 id="the-app-does-not-find-the-server-usb">The app does not find the server (USB) <a class="anchor" href="#the-app-does-not-find-the-server-usb" aria-label="Link to this section">#</a></h2>
+<ul><li>Run <code>adb reverse tcp:47800 tcp:47800</code> again: it is lost when the cable is replugged or the adb server restarts. <code>adb reverse --list</code> shows the active forwards.</li><li>If the server uses another port, forward that port: <code>adb reverse tcp:&lt;port&gt; tcp:&lt;port&gt;</code>, and start the app with <code>--es server 127.0.0.1:&lt;port&gt;</code>.</li></ul>
+<h2 id="connected-but-nothing-moves">Connected, but nothing moves <a class="anchor" href="#connected-but-nothing-moves" aria-label="Link to this section">#</a></h2>
+<ul><li><code>get_input()</code> returns <code>None</code> while the headset is not worn (the app sends no input without focus) and for 0.5 s after the last sample.</li><li>While the headset menu is open, <code>InputFrame.edit_mode</code> is <code>True</code>: your code should ignore the controls then (the demo does). Close the menu with the left menu button.</li><li><code>Hand.active</code> is <code>False</code> while a controller is not tracked (asleep, out of view).</li><li>Positions outside the scene bounds are clamped: make <code>bounds_min</code> / <code>bounds_max</code> contain everything that moves.</li><li>Call <code>publish()</code> every step; nothing is sent otherwise.</li></ul>
+<h2 id="the-scene-is-too-big-too-small-or-in-the-wrong-place">The scene is too big, too small or in the wrong place <a class="anchor" href="#the-scene-is-too-big-too-small-or-in-the-wrong-place" aria-label="Link to this section">#</a></h2>
+<p>Give <code>focus_center</code>, <code>focus_radius</code> (and <code>view_dir</code>) to <code>Scene</code>: the headset uses them to place and size the working area. In the headset, open the menu and use the grips and sticks to place and scale it, or press "Reset placement".</p>
+<h2 id="high-latency">High latency <a class="anchor" href="#high-latency" aria-label="Link to this section">#</a></h2>
+<ul><li>Pass the input to <code>publish(echo=inp)</code> and call <code>note_timing</code>, then look at the status page's latency breakdown.</li><li>"Wait for the step" and "simulator step" are your loop: with a slow simulator the latency is about the step time plus one to two display frames (<a href="measurements.html">Measurements</a>).</li><li>On Wi-Fi, use 5 GHz and keep the computer on a cable to the router if you can, or use the USB link.</li></ul>
+<h2 id="the-status-page-does-not-open">The status page does not open <a class="anchor" href="#the-status-page-does-not-open" aria-label="Link to this section">#</a></h2>
+<ul><li>It listens on <code>127.0.0.1:8800</code> by default: open it on the same computer. For another machine, start it with <code>host="0.0.0.0"</code> (it has no login).</li><li>Port 8800 already in use: <code>StatusPage(srv, port=8801)</code> or <code>quest-teleop-demo --status-port 8801</code>.</li><li>The Recordings section is empty: pass <code>recordings_dir=rec.root</code>.</li></ul>
+<h2 id="the-desktop-client-does-not-start">The desktop client does not start <a class="anchor" href="#the-desktop-client-does-not-start" aria-label="Link to this section">#</a></h2>
+<ul><li><code>no X display: use --offscreen</code>: it needs an X11 display (<code>DISPLAY</code> set).</li><li>Build errors about X11, EGL or zlib: install the development packages (<a href="install.html#3-the-desktop-client-optional">Install</a>).</li></ul>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="troubleshooting.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/troubleshooting.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="measurements.html"><span class="label">Previous</span>Measurements</a><a class="pn next" href="faq.html"><span class="label">Next</span>FAQ</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>

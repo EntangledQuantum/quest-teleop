@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status page and trajectory viewer · quest-teleop docs</title>
+<meta name="description" content="The local web page: what it shows, the extra callback, the trajectory viewer, the JSON endpoints.">
+<link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/status-page.html">
+<link rel="alternate" type="text/markdown" href="status-page.md" title="This page as Markdown">
+<link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060709'/%3E%3Crect x='4' y='4' width='8' height='8' fill='%238d90ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="docs">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="../index.html">quest-teleop</a>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="https://github.com/EntangledQuantum/quest-teleop">GitHub</a></li>
+      <li><a href="../llms.txt">llms.txt</a></li>
+    </ul>
+  </nav>
+</header>
+<div class="edge" role="presentation"></div>
+<div class="docs-layout">
+  <nav class="sidenav" aria-label="Documentation pages">
+    <p class="label">Documentation</p>
+    <ol>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="install.html">Install</a></li>
+      <li><a href="quest-setup.html">Quest 2 setup</a></li>
+      <li><a href="quick-start.html">Quick start</a></li>
+      <li><a href="library.html">Use it with your own simulator</a></li>
+      <li><a href="recording.html">Recording takes</a></li>
+      <li><a href="status-page.html" aria-current="page">Status page and trajectory viewer</a></li>
+      <li><a href="protocol.html">Protocol</a></li>
+      <li><a href="measurements.html">Measurements</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+    </ol>
+  </nav>
+  <main id="main">
+    <article class="prose">
+<h1 id="status-page-and-trajectory-viewer">Status page and trajectory viewer</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#start-it">Start it</a></li><li><a href="#what-it-shows">What it shows</a></li><li><a href="#your-part-of-the-page-extra">Your part of the page: extra</a></li><li><a href="#trajectory-viewer">Trajectory viewer</a></li><li><a href="#endpoints">Endpoints</a></li><li><a href="#accessibility">Accessibility</a></li></ol></nav>
+<p><code>StatusPage</code> serves a local web page from your server process: who is connected and how, how fast the simulator and the network run, where the latency goes, and the recorded takes. Each take opens in a trajectory viewer. Python standard library only, live by server-sent events, static HTML with no build step, nothing loaded from the internet.</p>
+<figure><img src="../assets/img/status_page.png" alt="The status page of the demo: a state strip (server running, headset connected by Wi-Fi, session running, recording take 2), then Connection, Session, Speeds with charts of the simulator real-time factor and network traffic, Latency split into its parts with a bar and a table, and a Recordings table listing one take." width="1500" height="2150" loading="lazy" decoding="async"></figure>
+<h2 id="start-it">Start it <a class="anchor" href="#start-it" aria-label="Link to this section">#</a></h2>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">from quest_teleop import StatusPage, TakeRecorder, TeleopServer
+
+srv = TeleopServer(name="my sim").start()
+rec = TakeRecorder(tools=("left", "right"), max_opening=0.08)
+page = StatusPage(srv, recordings_dir=rec.root, extra=my_status, title="My sim").start()
+print(page.url)                      # http://localhost:8800
+...
+page.stop()</code></pre></div>
+<div class="table"><table><thead><tr><th scope="col">Argument</th><th scope="col">Default</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>server</code></td><td></td><td>the <code>TeleopServer</code> to watch</td></tr><tr><td><code>port</code></td><td>8800</td><td>HTTP port</td></tr><tr><td><code>host</code></td><td><code>127.0.0.1</code></td><td>address to bind; only this computer can open the page. Use <code>0.0.0.0</code> to let other machines open it (it has no login)</td></tr><tr><td><code>extra</code></td><td><code>None</code></td><td>a function returning your application's part of the page (below), called once per period</td></tr><tr><td><code>title</code></td><td><code>"Teleoperation"</code></td><td>page title</td></tr><tr><td><code>period</code></td><td>1.0</td><td>seconds between updates</td></tr><tr><td><code>history_s</code></td><td>600</td><td>seconds of history kept for the charts</td></tr><tr><td><code>recordings_dir</code></td><td><code>None</code></td><td>a <code>TakeRecorder</code> folder: its takes are listed and open in the trajectory viewer</td></tr></tbody></table></div>
+<p>The demo starts it on port 8800 (<code>quest-teleop-demo --status-port 0</code> turns it off).</p>
+<h2 id="what-it-shows">What it shows <a class="anchor" href="#what-it-shows" aria-label="Link to this section">#</a></h2>
+<ul><li><strong>State strip</strong>: server, headset, session and recording state, each as a shape and words.</li><li><strong>Connection</strong>: headset connected and worn, USB or Wi-Fi, device, address, display rate, packet loss each way, scene scale, other clients.</li><li><strong>Session</strong>: whatever your <code>extra</code> callback reports.</li><li><strong>Speeds</strong>: simulator real-time factor and steps per second, network Mbit/s and packets per second, headset frames per second; charts over the last 10 minutes.</li><li><strong>Latency</strong>: total (median and 95th percentile) and its parts: network + pickup, wait for the next simulator step, simulator step, server processing, display refresh. The step and processing parts come from <code>server.note_timing</code> (<a href="library.html#latency-measurement">Latency measurement</a>).</li><li><strong>Recordings</strong>: every take in <code>recordings_dir</code>, newest first, with duration, steps, size and validity.</li></ul>
+<h2 id="your-part-of-the-page-extra">Your part of the page: <code>extra</code> <a class="anchor" href="#your-part-of-the-page-extra" aria-label="Link to this section">#</a></h2>
+<p><code>extra()</code> returns a dict; every key is optional:</p>
+<div class="code"><pre tabindex="0" aria-label="python code"><code class="language-python">def my_status():
+    return {
+        "session": {"name": "run-01",
+                    "state": "running",            # running | paused | recording | idle
+                    "state_text": "Session running",
+                    "rows": [["Scene", "pick and place"], ["Left tool", "idle"]]},
+        "sim": {"rtf": 0.98,                       # simulator speed / real time
+                "steps_per_s": 59.0,
+                "contact_n": 2.5},                 # contact force [N], drawn on the speed chart
+        # "recordings": {...}                      # only to replace the table built from recordings_dir
+    }</code></pre></div>
+<h2 id="trajectory-viewer">Trajectory viewer <a class="anchor" href="#trajectory-viewer" aria-label="Link to this section">#</a></h2>
+<figure><img src="../assets/img/trajectory_page.png" alt="The trajectory view of take 1: a 3D plot of the left and right tool paths with start and end labels and gripper-state markers, play and scrub controls, a legend, a properties table (session, take, duration, steps, rate, tools, validity, size), a per-tool table (path length, closes, opens, time closed, following, lost), and a gripper-over-time chart." width="1500" height="1640" loading="lazy" decoding="async"></figure>
+<p>Selecting a take on the status page opens <code>/take?file=...</code>:</p>
+<ul><li>each tool's path in 3D: drag to turn, shift-drag or right-drag to move, wheel to zoom; with the view focused, arrow keys turn, shift + arrows move, <code>+</code> and <code>-</code> zoom, space plays, Home and End jump to the ends;</li><li>play and scrub through time, at several speeds, optionally with the controller paths;</li><li>the gripper state marked along the path by shape as well as colour: open, closing, closed, opening, could not follow;</li><li>the gripper opening over time per tool;</li><li>the take's properties and a per-tool summary (path length, closes, opens, share of time closed and following, lost events).</li></ul>
+<h2 id="endpoints">Endpoints <a class="anchor" href="#endpoints" aria-label="Link to this section">#</a></h2>
+<p>All on the page's own address (default <code>http://localhost:8800</code>):</p>
+<div class="table"><table><thead><tr><th scope="col">Path</th><th scope="col">Returns</th></tr></thead><tbody><tr><td><code>/</code></td><td>the status page</td></tr><tr><td><code>/api/state</code></td><td>the newest sample as JSON: <code>server.monitor()</code> plus your <code>extra()</code> and the recordings table</td></tr><tr><td><code>/api/history</code></td><td>the samples of the last <code>history_s</code> seconds (JSON list)</td></tr><tr><td><code>/events</code></td><td>the live stream (server-sent events, one sample per period)</td></tr><tr><td><code>/take?file=&lt;session&gt;/&lt;take&gt;.npz</code></td><td>the trajectory viewer</td></tr><tr><td><code>/api/take?file=&lt;session&gt;/&lt;take&gt;.npz</code></td><td>that take's paths and properties as JSON</td></tr><tr><td><code>/fonts/*</code></td><td>the page's two typefaces</td></tr></tbody></table></div>
+<p><code>/api/state</code> is handy for scripts and agents: <code>curl -s http://localhost:8800/api/state</code>.</p>
+<h2 id="accessibility">Accessibility <a class="anchor" href="#accessibility" aria-label="Link to this section">#</a></h2>
+<p>Both pages use real text and tables, shapes plus words for every state, visible keyboard focus, keyboard control of the 3D view, and text equivalents for the charts.</p>
+<p>Next: <a href="protocol.html">Protocol</a>.</p>
+    </article>
+    <footer class="page-foot">
+      <p class="md-link">This page as Markdown: <a href="status-page.md" type="text/markdown"><code>https://entangledquantum.github.io/quest-teleop/docs/status-page.md</code></a></p>
+      <nav class="prev-next" aria-label="Previous and next page"><a class="pn prev" href="recording.html"><span class="label">Previous</span>Recording takes</a><a class="pn next" href="protocol.html"><span class="label">Next</span>Protocol</a></nav>
+    </footer>
+  </main>
+</div>
+<footer class="site-foot">
+  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
+</footer>
+</body>
+</html>
