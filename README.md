@@ -193,7 +193,8 @@ drawn.
 3. `~/android-sdk/platform-tools/adb devices` must list the headset as `device`. On Linux, if it shows
    `no permissions`: `echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="2833", MODE="0666", GROUP="plugdev"' | sudo tee
    /etc/udev/rules.d/51-oculus.rules && sudo udevadm control --reload-rules && sudo udevadm trigger`, then replug.
-4. `android/build_apk.sh install`. The app is under Library, filter "Unknown sources", as "Quest Teleop".
+4. `android/build_apk.sh install`. The app is under Library, filter "Unknown sources" (the drop-down at the top of
+   the Library; sideloaded apps are not listed under "All"), as "Quest Teleop" with a violet-ring gripper icon.
 5. **Network**: headset and computer on the same router (headset on 5 GHz, no guest network / client isolation).
    Open **TCP 47800 and UDP 47800-47801** in the computer's firewall, e.g. `sudo ufw allow 47800/tcp && sudo ufw
    allow 47800:47801/udp`, or `sudo firewall-cmd --add-port=47800/tcp --add-port=47800-47801/udp` (add

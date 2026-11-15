@@ -117,8 +117,14 @@ An APK that is already built installs with plain adb:
 adb install -r build/quest-teleop.apk
 ```
 
-In the headset the app is under **Library**, filter **Unknown sources**; its label there is **Quest Teleop**. Its package name is
-`com.entangledquantum.questteleop`.
+In the headset the app is under **Library**, filter **Unknown sources** (the drop-down at the top of the Library; a
+sideloaded app is never listed under "All" or in the app bar). Its label there is **Quest Teleop**, with the icon of a
+gripper's two jaws in a violet ring. Its package name is `com.entangledquantum.questteleop`; `adb shell dumpsys
+package com.entangledquantum.questteleop | grep version` shows the installed version (0.2.0, version code 2, has the
+icon). `adb install -r` keeps the app's settings (larger text, left-handed, passthrough, shadows).
+
+The icon is drawn by `tools/make_icon.py` into `client/quest/res/mipmap-*/` (Android launcher densities, square and
+round) and packaged by `build_apk.sh` with `aapt2 compile` / `aapt2 link`.
 
 ## 3. The desktop client (optional)
 

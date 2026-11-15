@@ -36,7 +36,7 @@ every step of a take.
 | `delete_last()` | delete the newest take of this session (file and index entry) |
 | `write_session(info)` | write `session.json` for this session |
 | `wait()` | wait until the last take is written (call before exiting) |
-| `recording`, `steps`, `take`, `n_saved`, `elapsed`, `root`, `session` | state: recording or not, steps so far, next take number, takes saved this session, seconds since start, folders |
+| `recording`, `steps`, `take`, `n_saved`, `elapsed`, `root`, `session` | state: recording or not, steps so far, next take number (one more than the highest number in the index or among the session folder's files, so numbers continue across server restarts and never repeat), takes saved this session, seconds since start, folders |
 
 The `info` keys `valid` (true / false) and `flags` (a list of strings) are shown in the status page's validity
 column.

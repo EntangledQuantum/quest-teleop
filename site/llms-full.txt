@@ -212,8 +212,14 @@ An APK that is already built installs with plain adb:
 adb install -r build/quest-teleop.apk
 ```
 
-In the headset the app is under **Library**, filter **Unknown sources**; its label there is **Quest Teleop**. Its package name is
-`com.entangledquantum.questteleop`.
+In the headset the app is under **Library**, filter **Unknown sources** (the drop-down at the top of the Library; a
+sideloaded app is never listed under "All" or in the app bar). Its label there is **Quest Teleop**, with the icon of a
+gripper's two jaws in a violet ring. Its package name is `com.entangledquantum.questteleop`; `adb shell dumpsys
+package com.entangledquantum.questteleop | grep version` shows the installed version (0.2.0, version code 2, has the
+icon). `adb install -r` keeps the app's settings (larger text, left-handed, passthrough, shadows).
+
+The icon is drawn by `tools/make_icon.py` into `client/quest/res/mipmap-*/` (Android launcher densities, square and
+round) and packaged by `build_apk.sh` with `aapt2 compile` / `aapt2 link`.
 
 ## 3. The desktop client (optional)
 
@@ -871,7 +877,7 @@ every step of a take.
 | `delete_last()` | delete the newest take of this session (file and index entry) |
 | `write_session(info)` | write `session.json` for this session |
 | `wait()` | wait until the last take is written (call before exiting) |
-| `recording`, `steps`, `take`, `n_saved`, `elapsed`, `root`, `session` | state: recording or not, steps so far, next take number, takes saved this session, seconds since start, folders |
+| `recording`, `steps`, `take`, `n_saved`, `elapsed`, `root`, `session` | state: recording or not, steps so far, next take number (one more than the highest number in the index or among the session folder's files, so numbers continue across server restarts and never repeat), takes saved this session, seconds since start, folders |
 
 The `info` keys `valid` (true / false) and `flags` (a list of strings) are shown in the status page's validity
 column.
@@ -1468,6 +1474,11 @@ The app shows "Looking for a server on this network". Check, in this order:
 
 ## Connected, but nothing moves
 
+* The app has to be in front. When the headset is taken off or goes to sleep, or the Quest menu or another app is in
+  front, the Quest stops drawing the app but keeps it running in the background. Version 0.2.0 closes its connection
+  3 s after it stops being visible and reconnects when it is in front again; 0.1.0 kept the connection, so the server
+  listed a client that sent no input and never loaded the scene (status page: "sending" no, "scene loaded" no), and
+  after a while it reconnected in a loop. Open the app from **Library**, **Unknown sources**.
 * `get_input()` returns `None` while the headset is not worn (the app sends no input without focus) and for 0.5 s
   after the last sample.
 * While the headset menu is open, `InputFrame.edit_mode` is `True`: your code should ignore the controls then (the

@@ -47,6 +47,11 @@ class App {
 public:
     void init(const NetConfig& net, const std::string& settingsFile = "");   // needs a current GL context
     void shutdown();
+    // Connection on / off. The platform turns it off while the app cannot be seen (headset off, Quest menu in
+    // front, app in the background): the session is closed with BYE, so the server never keeps a client that
+    // renders nothing and sends no input, and nothing piles up unread. Back in front, the app reconnects.
+    void setOnline(bool on);
+    bool online() const { return online_; }
 
     // Once per frame: receive, apply, run the UI, send the controller sample, render the shadow map.
     // Leaves an unspecified framebuffer bound: bind the eye target afterwards.
@@ -102,6 +107,8 @@ private:
     void localHaptic(int hand, float amplitude, float duration);
 
     NetClient net_;
+    NetConfig netCfg_;
+    bool online_ = false;
     Scene scene_;
     Renderer renderer_;
     Ui ui_;

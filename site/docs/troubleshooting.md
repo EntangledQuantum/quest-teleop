@@ -45,6 +45,11 @@ The app shows "Looking for a server on this network". Check, in this order:
 
 ## Connected, but nothing moves
 
+* The app has to be in front. When the headset is taken off or goes to sleep, or the Quest menu or another app is in
+  front, the Quest stops drawing the app but keeps it running in the background. Version 0.2.0 closes its connection
+  3 s after it stops being visible and reconnects when it is in front again; 0.1.0 kept the connection, so the server
+  listed a client that sent no input and never loaded the scene (status page: "sending" no, "scene loaded" no), and
+  after a while it reconnected in a loop. Open the app from **Library**, **Unknown sources**.
 * `get_input()` returns `None` while the headset is not worn (the app sends no input without focus) and for 0.5 s
   after the last sample.
 * While the headset menu is open, `InputFrame.edit_mode` is `True`: your code should ignore the controls then (the

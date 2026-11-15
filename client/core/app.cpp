@@ -26,11 +26,29 @@ void App::init(const NetConfig& cfg, const std::string& settingsFile) {
     loadSettings();
     renderer_.init();
     ui_.init();
-    net_.start(cfg);
+    netCfg_ = cfg;
+    setOnline(true);
+}
+
+void App::setOnline(bool on) {
+    if (on == online_) return;
+    online_ = on;
+    if (on) {
+        QT_LOG("in front again: connecting");
+        net_.start(netCfg_);
+        return;
+    }
+    QT_LOG("not visible: closing the connection until the app is in front again");
+    if (net_.state() == NetClient::CONNECTED) net_.sendMsg(M_BYE, nullptr, 0);
+    net_.stop();
+    scene_.clear();                                  // as after a lost connection: the scene is sent again on reconnect
+    for (auto& t : scene_.texts) t = TextItem();
+    scene_.panel = PanelInfo();
+    editMode = false;
 }
 
 void App::shutdown() {
-    net_.stop();
+    setOnline(false);
     ui_.shutdown();
     renderer_.shutdown();
 }

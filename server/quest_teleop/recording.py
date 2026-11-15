@@ -112,7 +112,16 @@ class TakeRecorder:
         return read_index(self.root)
 
     def _next_take(self) -> int:
-        return 1 + max([t["take"] for t in self.index() if t["session"] == self.session], default=0)
+        """One more than the highest take number this session has, in the index or as a file in the session folder:
+        numbers continue across server restarts with the same session name, and never repeat one a file already has
+        (a take whose index entry was lost, or one written by another process into the same folder)."""
+        import re
+        nums = [t["take"] for t in self.index() if t["session"] == self.session]
+        try:
+            nums += [int(m.group(1)) for f in os.listdir(self.dir) if (m := re.match(r"take_(\d+)_", f))]
+        except OSError:
+            pass
+        return 1 + max(nums, default=0)
 
     @property
     def n_saved(self) -> int:

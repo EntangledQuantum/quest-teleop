@@ -666,6 +666,11 @@ void android_main(android_app* app) {
         ANativeActivity_finish(app->activity);
     }
 
+    // The Quest stops drawing an app that is not in front (headset taken off, Quest menu or another app in front) but
+    // keeps its process, and its network thread, alive. A connection kept open then shows on the server as a client
+    // that sends no input and never loads the scene, and the messages it does not read pile up. So the app goes
+    // offline 3 s after it stops being visible and reconnects as soon as it is visible again.
+    double hiddenSince = -1.0;
     while (!app->destroyRequested) {
         pumpAndroid(app, (ok && x.running) ? 0 : 100);
         if (!ok) continue;
@@ -675,6 +680,13 @@ void android_main(android_app* app) {
             x.exitRequested = false;
             continue;
         }
+        bool visible = x.running && (x.state == XR_SESSION_STATE_VISIBLE || x.state == XR_SESSION_STATE_FOCUSED);
+        timespec ts{};
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        double now = static_cast<double>(ts.tv_sec) + 1e-9 * static_cast<double>(ts.tv_nsec);
+        if (visible) hiddenSince = -1.0;
+        else if (hiddenSince < 0.0) hiddenSince = now;
+        teleop.setOnline(visible || now - hiddenSince < 3.0);
         if (x.running) renderFrame(x, teleop);
     }
 

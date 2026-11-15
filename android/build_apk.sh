@@ -31,12 +31,15 @@ cmake -S client -B build/android \
     -DOPENXR_DIR="$OPENXR_DIR" -DCMAKE_BUILD_TYPE=Release > /dev/null
 cmake --build build/android -j "$(nproc)"
 
-# 2. package: manifest (+ framework resources for the theme reference), then the two native libraries
+# 2. package: the app icon (client/quest/res, drawn by tools/make_icon.py), the manifest (+ framework resources for
+#    the theme reference), then the two native libraries
 STAGE=build/apk
 rm -rf "$STAGE"
-mkdir -p "$STAGE/lib/$ABI"
+mkdir -p "$STAGE/lib/$ABI" "$STAGE/res"
 cp build/android/libquestteleop.so "$OPENXR_DIR/jni/$ABI/libopenxr_loader.so" "$STAGE/lib/$ABI/"
-"$BUILD_TOOLS/aapt2" link -o "$STAGE/unaligned.apk" --manifest client/quest/AndroidManifest.xml -I "$PLATFORM_JAR"
+"$BUILD_TOOLS/aapt2" compile --dir client/quest/res -o "$STAGE/res/compiled.zip"
+"$BUILD_TOOLS/aapt2" link -o "$STAGE/unaligned.apk" --manifest client/quest/AndroidManifest.xml -I "$PLATFORM_JAR" \
+    "$STAGE/res/compiled.zip"
 (cd "$STAGE" && zip -q -r unaligned.apk lib)
 
 # 3. align and sign
