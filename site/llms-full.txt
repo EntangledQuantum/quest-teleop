@@ -883,6 +883,8 @@ column.
                                                     wall_seconds, rate_hz, tools, and your info
 ~/teleop_recordings/<session>/session.json          what write_session() was given
 ~/teleop_recordings/<session>/take_003_<time>.npz   one take
+~/teleop_recordings/<session>/take_003_<time>.json  its display name and note, once it has been renamed
+~/teleop_recordings/converted/index.json            optional: datasets your application derived from takes
 ```
 
 ## Arrays in a take
@@ -925,6 +927,46 @@ for entry in read_index(root):                       # every take listed in inde
 `load_take(path, payload=False)` skips the `extra/` and `start/` arrays (which can be most of the file) and lists
 their names under `extra_keys`. The files are ordinary NumPy archives: `numpy.load(path)` reads them too.
 
+## Deleting, renaming and keeping the index in step
+
+The index always says what is on disk. You can delete or move take files by hand: the next time the status page
+starts or refreshes (or you call `reconcile`), entries whose file is gone are dropped and take files that are not
+listed are added (read from the file).
+
+```python
+from quest_teleop.recording import reconcile, delete_takes, rename_take, take_files
+
+reconcile(root)                                   # {"removed": [...], "added": [...], "converted_removed": [...]}
+take_files(root, "run-01/take_003_x.npz")         # the take and its sidecar files
+delete_takes(root, ["run-01/take_003_x.npz"])     # for good: the .npz, its sidecars, the index entry
+rename_take(root, "run-01/take_003_x.npz", title="Clean pick", note="first try")
+rename_take(root, "run-01/take_003_x.npz", new_name="clean pick")     # also renames the file
+rec.delete_last()                                 # the newest take of this session (the headset menu's action)
+```
+
+| Function | What it does |
+|---|---|
+| `reconcile(root)` | makes `index.json` match the folder; also drops derived datasets whose folder is gone from `converted/index.json`. Cheap when nothing changed |
+| `delete_takes(root, files, also_converted=False, busy=())` | removes each take's `.npz`, its sidecar files and its index entry. Returns `deleted`, `refused` (with a reason), `removed` (files) and `converted_removed` |
+| `rename_take(root, file, title=None, note=None, new_name=None, busy=())` | sets the display name and note (index entry and `<take>.json`, so they survive a rebuilt index). With `new_name` the file and its sidecars are renamed too. Returns the index entry; raises `ValueError` with the reason when refused |
+| `take_files(root, file)` | the files that belong to a take: the `.npz` and files in the same folder named `<take>.<anything>` or `<take>_<anything>` |
+| `sanitize_name(text)` | the file name `rename_take` would use: letters, digits, space, dot, dash and underscore, at most 80 characters, no path separators and no `..` |
+
+Rules that always hold:
+
+* Nothing outside the recordings folder is touched. Paths with `..`, absolute paths and symbolic links are refused.
+* A take that is being recorded or still being written is refused. Pass `busy=rec.busy_files()`; the status page
+  does this when it is given the recorder.
+* A file rename never replaces an existing file; the name is refused instead.
+* `index.json` and `converted/index.json` are replaced atomically, under a lock file (`index.json.lock`) shared by
+  the recorder, the status page and your own tools (`with index_lock(root): ...` around your own read-modify-write).
+* Derived datasets are deleted only with `also_converted=True`, and only when their folder is inside
+  `<root>/converted`. A file rename updates their take references.
+
+`converted/index.json` is optional and written by your application:
+`{"version": 1, "datasets": [{"name": ..., "out": folder, "takes": [take files]}]}`. The status page shows the
+dataset names next to each take.
+
 Next: [Status page and trajectory viewer](https://entangledquantum.github.io/quest-teleop/docs/status-page.md).
 
 
@@ -948,7 +990,7 @@ from quest_teleop import StatusPage, TakeRecorder, TeleopServer
 
 srv = TeleopServer(name="my sim").start()
 rec = TakeRecorder(tools=("left", "right"), max_opening=0.08)
-page = StatusPage(srv, recordings_dir=rec.root, extra=my_status, title="My sim").start()
+page = StatusPage(srv, recorder=rec, extra=my_status, title="My sim").start()
 print(page.url)                      # http://localhost:8800
 ...
 page.stop()
@@ -963,7 +1005,8 @@ page.stop()
 | `title` | `"Teleoperation"` | page title |
 | `period` | 1.0 | seconds between updates |
 | `history_s` | 600 | seconds of history kept for the charts |
-| `recordings_dir` | `None` | a `TakeRecorder` folder: its takes are listed and open in the trajectory viewer |
+| `recorder` | `None` | the `TakeRecorder` in use: its folder is listed, and the take being recorded cannot be deleted or renamed |
+| `recordings_dir` | `None` | a recordings folder to list when there is no recorder in this process (e.g. a viewer for old takes) |
 
 The demo starts it on port 8800 (`quest-teleop-demo --status-port 0` turns it off).
 
@@ -978,7 +1021,30 @@ The demo starts it on port 8800 (`quest-teleop-demo --status-port 0` turns it of
 * **Latency**: total (median and 95th percentile) and its parts: network + pickup, wait for the next simulator step,
   simulator step, server processing, display refresh. The step and processing parts come from
   `server.note_timing` ([Latency measurement](https://entangledquantum.github.io/quest-teleop/docs/library.md#latency-measurement)).
-* **Recordings**: every take in `recordings_dir`, newest first, with duration, steps, size and validity.
+* **Recordings**: every take in the folder, newest first, with its name, duration, steps, size, validity and the
+  datasets converted from it. Each take has **Rename** and **Delete** buttons; tick several takes to delete them
+  together.
+
+## Managing takes
+
+The list always matches the disk. When the page starts, and again at every refresh, the index is reconciled with the
+take files that are present: a take whose file you removed by hand is no longer listed, and a take file you copied
+in is. Opening the page of a take that is gone says so and links back to the list.
+
+**Delete** (per take, or **Delete selected** for the ticked ones) opens a dialog that names the takes, lists every
+file that will be removed and says that it cannot be undone. Cancel has the focus when it opens. If datasets were
+converted from the takes, a box "Also delete the converted clips" appears; they are kept unless you tick it. The
+headset menu's "Delete the last take" removes a take the same way.
+
+**Rename** (on the status page and on the take's page) sets the name shown in the list and an optional note; the
+take number, session and file name stay visible underneath. Tick "Also rename the file on disk" to change the file
+name too: the name is checked as you type (no `/`, `\` or `..`, at most 80 characters, other characters become
+`_`), an existing name is refused, and the index and converted datasets follow.
+
+The take being recorded, or still being written, cannot be deleted or renamed; its buttons are disabled. Both
+dialogs work from the keyboard (Tab, Space, Enter, Escape to cancel) and report errors in the dialog.
+[Recording takes](https://entangledquantum.github.io/quest-teleop/docs/recording.md#deleting-renaming-and-keeping-the-index-in-step) has the same operations as Python
+functions.
 
 ## Your part of the page: `extra`
 
@@ -994,7 +1060,8 @@ def my_status():
         "sim": {"rtf": 0.98,                       # simulator speed / real time
                 "steps_per_s": 59.0,
                 "contact_n": 2.5},                 # contact force [N], drawn on the speed chart
-        # "recordings": {...}                      # only to replace the table built from recordings_dir
+        # "recordings": {...}                      # only to replace the list built from the folder; same
+        #                                          # shape as quest_teleop.status.recordings_table(root)
     }
 ```
 
@@ -1025,7 +1092,18 @@ All on the page's own address (default `http://localhost:8800`):
 | `/events` | the live stream (server-sent events, one sample per period) |
 | `/take?file=<session>/<take>.npz` | the trajectory viewer |
 | `/api/take?file=<session>/<take>.npz` | that take's paths and properties as JSON |
-| `/fonts/*` | the page's two typefaces |
+| `/fonts/*`, `/manage.js` | the page's two typefaces; the rename and delete dialogs |
+| `POST /api/delete` | body `{"files": ["<session>/<take>.npz", ...], "converted": false}`; returns `deleted`, `refused` (file and reason), `removed`, `converted_removed` |
+| `POST /api/rename` | body `{"file": ..., "title": ..., "note": ..., "rename_file": false, "new_name": ...}`; returns `{"ok": true, "entry": {...}}`, or status 400 and `{"error": reason}` |
+
+The two POST endpoints change files, so they accept only JSON requests that carry the header
+`X-Requested-With: quest-teleop` and come from the page's own address; a form or a script on another web site
+cannot call them. They act only inside the recordings folder. Example:
+
+```bash
+curl -s -X POST http://localhost:8800/api/rename -H 'Content-Type: application/json' \
+     -H 'X-Requested-With: quest-teleop' -d '{"file": "run-01/take_003_x.npz", "title": "Clean pick"}'
+```
 
 `/api/state` is handy for scripts and agents: `curl -s http://localhost:8800/api/state`.
 
@@ -1415,7 +1493,7 @@ area. In the headset, open the menu and use the grips and sticks to place and sc
 * It listens on `127.0.0.1:8800` by default: open it on the same computer. For another machine, start it with
   `host="0.0.0.0"` (it has no login).
 * Port 8800 already in use: `StatusPage(srv, port=8801)` or `quest-teleop-demo --status-port 8801`.
-* The Recordings section is empty: pass `recordings_dir=rec.root`.
+* The Recordings section is empty: pass `recorder=rec` (or `recordings_dir=...`).
 
 ## The desktop client does not start
 

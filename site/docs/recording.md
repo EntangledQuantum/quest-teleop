@@ -48,6 +48,8 @@ column.
                                                     wall_seconds, rate_hz, tools, and your info
 ~/teleop_recordings/<session>/session.json          what write_session() was given
 ~/teleop_recordings/<session>/take_003_<time>.npz   one take
+~/teleop_recordings/<session>/take_003_<time>.json  its display name and note, once it has been renamed
+~/teleop_recordings/converted/index.json            optional: datasets your application derived from takes
 ```
 
 ## Arrays in a take
@@ -89,5 +91,45 @@ for entry in read_index(root):                       # every take listed in inde
 
 `load_take(path, payload=False)` skips the `extra/` and `start/` arrays (which can be most of the file) and lists
 their names under `extra_keys`. The files are ordinary NumPy archives: `numpy.load(path)` reads them too.
+
+## Deleting, renaming and keeping the index in step
+
+The index always says what is on disk. You can delete or move take files by hand: the next time the status page
+starts or refreshes (or you call `reconcile`), entries whose file is gone are dropped and take files that are not
+listed are added (read from the file).
+
+```python
+from quest_teleop.recording import reconcile, delete_takes, rename_take, take_files
+
+reconcile(root)                                   # {"removed": [...], "added": [...], "converted_removed": [...]}
+take_files(root, "run-01/take_003_x.npz")         # the take and its sidecar files
+delete_takes(root, ["run-01/take_003_x.npz"])     # for good: the .npz, its sidecars, the index entry
+rename_take(root, "run-01/take_003_x.npz", title="Clean pick", note="first try")
+rename_take(root, "run-01/take_003_x.npz", new_name="clean pick")     # also renames the file
+rec.delete_last()                                 # the newest take of this session (the headset menu's action)
+```
+
+| Function | What it does |
+|---|---|
+| `reconcile(root)` | makes `index.json` match the folder; also drops derived datasets whose folder is gone from `converted/index.json`. Cheap when nothing changed |
+| `delete_takes(root, files, also_converted=False, busy=())` | removes each take's `.npz`, its sidecar files and its index entry. Returns `deleted`, `refused` (with a reason), `removed` (files) and `converted_removed` |
+| `rename_take(root, file, title=None, note=None, new_name=None, busy=())` | sets the display name and note (index entry and `<take>.json`, so they survive a rebuilt index). With `new_name` the file and its sidecars are renamed too. Returns the index entry; raises `ValueError` with the reason when refused |
+| `take_files(root, file)` | the files that belong to a take: the `.npz` and files in the same folder named `<take>.<anything>` or `<take>_<anything>` |
+| `sanitize_name(text)` | the file name `rename_take` would use: letters, digits, space, dot, dash and underscore, at most 80 characters, no path separators and no `..` |
+
+Rules that always hold:
+
+* Nothing outside the recordings folder is touched. Paths with `..`, absolute paths and symbolic links are refused.
+* A take that is being recorded or still being written is refused. Pass `busy=rec.busy_files()`; the status page
+  does this when it is given the recorder.
+* A file rename never replaces an existing file; the name is refused instead.
+* `index.json` and `converted/index.json` are replaced atomically, under a lock file (`index.json.lock`) shared by
+  the recorder, the status page and your own tools (`with index_lock(root): ...` around your own read-modify-write).
+* Derived datasets are deleted only with `also_converted=True`, and only when their folder is inside
+  `<root>/converted`. A file rename updates their take references.
+
+`converted/index.json` is optional and written by your application:
+`{"version": 1, "datasets": [{"name": ..., "out": folder, "takes": [take files]}]}`. The status page shows the
+dataset names next to each take.
 
 Next: [Status page and trajectory viewer](status-page.md).

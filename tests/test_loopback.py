@@ -228,7 +228,7 @@ def test_status_page_and_recording(tmp_path):
     assert (take["tool/grip_state"][:, 1] == 1).any(), "the right gripper was closing while the trigger was held"
     # the recordings table and the trajectory view
     table = st["recordings"]
-    assert table["rows"][0][1]["href"] == "/take?file=" + index[0]["file"] and table["rows"][0][7]["kind"] == "good"
+    assert table["takes"][0]["href"] == "/take?file=" + index[0]["file"] and table["takes"][0]["validity"]["kind"] == "good"
     tj = json.loads(urllib.request.urlopen(base + "/api/take?file=" + index[0]["file"]).read())
     assert len(tj["tools"]) == 2 and len(tj["tools"][1]["pos"]) == len(tj["t"]) == T and tj["grip_names"][2] == "closed"
     assert tj["entry"]["take"] == 1 and "cube_pos" in tj["extra_keys"] and tj["tools"][1]["path_m"] > 0.01

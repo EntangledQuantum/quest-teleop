@@ -35,6 +35,14 @@ Arrays in a take (T steps, N tools; every array is optional except t and tool/po
 
 `load_take(path)` reads one; `take_summary(take)` computes path lengths, gripper events and durations (the status
 page's trajectory view uses it).
+
+Managing the folder (the status page and command-line tools use these; all of them keep index.json and the files on
+disk in step, write the index atomically under a lock, and never touch anything outside the folder):
+
+    reconcile(root)                         index.json := what is on disk (missing files dropped, unlisted takes added)
+    delete_takes(root, [files], ...)        remove takes: the .npz, sidecar files, the index entry
+    rename_take(root, file, title=..., note=..., new_name=...)     display name and note; optionally the file name
+    take_files(root, file)                  the files that belong to a take
 """
 from __future__ import annotations
 
@@ -118,6 +126,7 @@ class TakeRecorder:
     def start(self, start_state: dict | None = None) -> None:
         self._rows, self.steps = {}, 0
         self._start = {f"start/{k}": np.asarray(v) for k, v in (start_state or {}).items()}
+        self.take = self._next_take()                  # takes may have been deleted since the last one
         self._t0, self._started = time.time(), time.strftime("%Y%m%d-%H%M%S")
         self.recording = True
 
@@ -171,11 +180,10 @@ class TakeRecorder:
         self.take += 1
         self.last = entry
         os.makedirs(self.dir, exist_ok=True)
-        takes = self.index() + [entry]
-        tmp = self._index_path() + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(dict(version=2, takes=takes), f, indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
-        os.replace(tmp, self._index_path())
+        final = os.path.join(self.dir, name)
+        open(final + ".part", "wb").close()            # "being written": the index entry is kept, the take cannot be deleted
+        with index_lock(self.root):
+            write_index(self.root, read_index(self.root) + [entry])
         max_open = self.max_opening
 
         def save():
@@ -190,32 +198,345 @@ class TakeRecorder:
                     arrays["tool/grip_state"] = np.stack([derive_grip_state(src[:, i], mx[i]) for i in range(src.shape[1])], 1)
             arrays.update(start)
             arrays["meta"] = np.array(json.dumps(meta))
-            np.savez_compressed(os.path.join(self.dir, name), **arrays)
+            with open(final + ".part", "wb") as f:     # complete file or none: the name appears only when it is whole
+                np.savez_compressed(f, **arrays)
+            os.replace(final + ".part", final)
         self._saver = threading.Thread(target=save, daemon=False, name="take-writer")
         self._saver.start()
         return entry
 
     def delete_last(self) -> dict | None:
-        """Remove the newest take of this session (file and index entry)."""
+        """Remove the newest take of this session (its file, sidecar files and index entry)."""
         self.wait()
-        takes = self.index()
-        mine = [t for t in takes if t["session"] == self.session]
+        mine = [t for t in self.index() if t["session"] == self.session]
         if not mine:
             return None
         last = max(mine, key=lambda t: t["take"])
-        takes.remove(last)
-        with open(self._index_path(), "w") as f:
-            json.dump(dict(version=2, takes=takes), f, indent=1)
-        try:
-            os.remove(os.path.join(self.root, last["file"]))
-        except OSError:
-            pass
-        self.take = self._next_take()
+        delete_takes(self.root, [last["file"]])
+        self.refresh()
         return last
+
+    def refresh(self) -> None:
+        """Take numbering from the index again (after takes were deleted or the folder changed)."""
+        if not self.recording:
+            self.take = self._next_take()
+
+    def busy_files(self) -> list:
+        """Takes that must not be deleted or renamed now: the one being recorded (the file it will get)."""
+        if self.recording:
+            return [os.path.join(self.session, f"take_{self.take:03d}_{self._started}.npz")]
+        return []
 
     def wait(self) -> None:
         if self._saver is not None:
             self._saver.join()
+
+
+# ------------------------------------------------------------------------------------------------ the folder
+class index_lock:
+    """Exclusive lock on a recordings folder's index (advisory, `<root>/index.json.lock`), so that the recorder, the
+    status page and command-line tools do not write it at the same time."""
+
+    def __init__(self, root: str):
+        self.path = os.path.join(root, "index.json.lock")
+        self._f = None
+
+    def __enter__(self):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        self._f = open(self.path, "a")
+        try:
+            import fcntl
+            fcntl.flock(self._f, fcntl.LOCK_EX)
+        except (ImportError, OSError):                 # no flock on this platform: best effort
+            pass
+        return self
+
+    def __exit__(self, *exc):
+        try:
+            import fcntl
+            fcntl.flock(self._f, fcntl.LOCK_UN)
+        except (ImportError, OSError):
+            pass
+        self._f.close()
+
+
+def _write_json(path: str, obj) -> None:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(obj, f, indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
+    os.replace(tmp, path)
+
+
+def write_index(root: str, takes: list) -> None:
+    """Replace index.json atomically. Hold `index_lock(root)` around read-modify-write."""
+    os.makedirs(root, exist_ok=True)
+    _write_json(os.path.join(root, "index.json"), dict(version=2, takes=takes))
+
+
+def read_converted(root: str) -> list:
+    """Datasets an application derived from takes (`<root>/converted/index.json`: name, out folder, takes)."""
+    try:
+        with open(os.path.join(root, "converted", "index.json")) as f:
+            return json.load(f)["datasets"]
+    except (OSError, ValueError, KeyError):
+        return []
+
+
+def _write_converted(root: str, datasets: list) -> None:
+    os.makedirs(os.path.join(root, "converted"), exist_ok=True)
+    _write_json(os.path.join(root, "converted", "index.json"), dict(version=1, datasets=datasets))
+
+
+def _inside(root: str, path: str) -> bool:
+    """True when `path`, with every symbolic link resolved, lies inside `root`."""
+    rr = os.path.realpath(root)
+    return os.path.realpath(path).startswith(rr + os.sep)
+
+
+def _sidecar_path(root: str, rel: str) -> str:
+    return os.path.join(root, os.path.splitext(rel)[0] + ".json")
+
+
+_checked: dict = {}                                    # path -> (mtime, size, is a take file)
+
+
+def _is_take_file(path: str) -> bool:
+    """A readable .npz with the arrays every take has (checked once per file version)."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return False
+    key = (st.st_mtime_ns, st.st_size)
+    hit = _checked.get(path)
+    if hit and hit[0] == key:
+        return hit[1]
+    try:
+        with np.load(path, allow_pickle=False) as z:
+            ok = "t" in z.files and "tool/pos" in z.files
+    except Exception:
+        ok = False
+    _checked[path] = (key, ok)
+    return ok
+
+
+def _entry_from_file(root: str, rel: str) -> dict:
+    """An index entry for a take file that is not in the index, from the file itself and its sidecar."""
+    path = os.path.join(root, rel)
+    with np.load(path, allow_pickle=False) as z:
+        t = np.asarray(z["t"], float)
+        wall = float(z["t_wall"][-1]) if "t_wall" in z.files else 0.0
+        meta = json.loads(str(z["meta"])) if "meta" in z.files else {}
+        n_tools = z["tool/pos"].shape[1]
+    session = os.path.dirname(rel).replace(os.sep, "/") or meta.get("session", "")
+    seconds = float(t[-1] - t[0]) if len(t) > 1 else 0.0
+    started = meta.get("started") or time.strftime("%Y%m%d-%H%M%S", time.localtime(os.path.getmtime(path)))
+    entry = dict(file=rel, session=session, take=int(meta.get("take", 0)), started=started, steps=int(len(t)), seconds=seconds,
+                 wall_seconds=wall, rate_hz=round((len(t) - 1) / seconds, 3) if seconds > 0 else 0.0,
+                 tools=meta.get("tools") or [f"tool {i}" for i in range(n_tools)], recovered=True)
+    try:
+        with open(_sidecar_path(root, rel)) as f:
+            side = json.load(f)
+        entry.update({k: side[k] for k in ("title", "note") if side.get(k)})
+    except (OSError, ValueError):
+        pass
+    return entry
+
+
+def reconcile(root: str) -> dict:
+    """Make index.json say what is on disk: entries whose file is gone are dropped (unless the take is still being
+    written), take files that are not listed are added (read from the file), and derived datasets whose folder is
+    gone are dropped from `converted/index.json`. Cheap when nothing changed; safe to call often.
+    Returns {"removed": [files], "added": [files], "converted_removed": [names]}."""
+    out = dict(removed=[], added=[], converted_removed=[])
+    if not os.path.isdir(root):
+        return out
+    with index_lock(root):
+        takes = read_index(root)
+        keep = []
+        for t in takes:
+            path = os.path.join(root, t.get("file", ""))
+            if os.path.isfile(path) or os.path.exists(path + ".part"):
+                keep.append(t)
+            else:
+                out["removed"].append(t.get("file"))
+        listed = {t["file"] for t in keep}
+        for session in sorted(os.listdir(root)):
+            sdir = os.path.join(root, session)
+            if session == "converted" or session.startswith(".") or not os.path.isdir(sdir) or os.path.islink(sdir):
+                continue
+            for name in sorted(os.listdir(sdir)):
+                rel = os.path.join(session, name)
+                if not name.endswith(".npz") or rel in listed or os.path.islink(os.path.join(sdir, name)):
+                    continue
+                if _is_take_file(os.path.join(sdir, name)):
+                    try:
+                        keep.append(_entry_from_file(root, rel))
+                        out["added"].append(rel)
+                    except Exception:                  # unreadable after all: leave it alone
+                        pass
+        if out["removed"] or out["added"]:
+            write_index(root, keep)
+        datasets = read_converted(root)
+        alive = [d for d in datasets if os.path.isdir(d.get("out", "")) and os.listdir(d["out"])]
+        if len(alive) != len(datasets):
+            out["converted_removed"] = [d.get("name") for d in datasets if d not in alive]
+            _write_converted(root, alive)
+    return out
+
+
+def take_files(root: str, rel: str) -> list:
+    """The files that belong to one take (relative to root): the .npz and its sidecars, i.e. the other files in the
+    same folder named `<take file without .npz>.<anything>` or `<take file without .npz>_<anything>` (notes, renders,
+    exports). Another take's .npz is never a sidecar, and a file that fits a longer take name belongs to that take."""
+    folder, name = os.path.split(rel)
+    stem = os.path.splitext(name)[0]
+    out = [rel]
+    try:
+        names = sorted(os.listdir(os.path.join(root, folder)))
+    except OSError:
+        return out
+    longer = [os.path.splitext(n)[0] for n in names if n.endswith(".npz") and n != name and len(n) - 4 > len(stem)]
+    for other in names:
+        if other == name or other.endswith((".npz", ".part")) or not other.startswith((stem + ".", stem + "_")):
+            continue
+        if any(other.startswith((s + ".", s + "_")) for s in longer):
+            continue
+        out.append(os.path.join(folder, other))
+    return out
+
+
+def _check_take_path(root: str, rel: str) -> str:
+    """The absolute path of a take given relative to root; ValueError when it is not a take inside the folder."""
+    if not rel or os.path.isabs(rel) or ".." in rel.replace("\\", "/").split("/") or not rel.endswith(".npz"):
+        raise ValueError("not a take of this folder")
+    path = os.path.join(root, rel)
+    if os.path.islink(path) or not _inside(root, path):
+        raise ValueError("not a take of this folder")
+    return path
+
+
+def delete_takes(root: str, files, also_converted: bool = False, busy=()) -> dict:
+    """Delete takes for good: the .npz, its sidecar files and its index entry. Only files inside `root` are ever
+    removed. `busy`: takes that must not be touched (e.g. `recorder.busy_files()`); a take that is still being
+    written is refused too. also_converted=True also removes the derived datasets that contain a deleted take
+    (their folders under `<root>/converted` and their entries).
+    Returns {"deleted": [files], "refused": [{"file", "reason"}], "removed": [paths], "converted_removed": [names]}."""
+    out = dict(deleted=[], refused=[], removed=[], converted_removed=[])
+    busy = set(busy)
+    with index_lock(root):
+        takes = read_index(root)
+        for rel in files:
+            try:
+                path = _check_take_path(root, rel)
+            except ValueError as e:
+                out["refused"].append(dict(file=rel, reason=str(e)))
+                continue
+            if rel in busy or os.path.exists(path + ".part"):
+                out["refused"].append(dict(file=rel, reason="the take is being recorded or written"))
+                continue
+            if not os.path.isfile(path) and not any(t.get("file") == rel for t in takes):
+                out["refused"].append(dict(file=rel, reason="no such take"))
+                continue
+            for f in take_files(root, rel):
+                fp = os.path.join(root, f)
+                if os.path.isfile(fp) and not os.path.islink(fp) and _inside(root, fp):
+                    os.remove(fp)
+                    out["removed"].append(f)
+            takes = [t for t in takes if t.get("file") != rel]
+            out["deleted"].append(rel)
+        if out["deleted"]:
+            write_index(root, takes)
+            if also_converted:
+                import shutil
+                gone, datasets, keep = set(out["deleted"]), read_converted(root), []
+                conv_root = os.path.join(root, "converted")
+                for d in datasets:
+                    if gone & set(d.get("takes", [])):
+                        folder = d.get("out", "")
+                        if os.path.isdir(folder) and not os.path.islink(folder) and _inside(conv_root, folder):
+                            shutil.rmtree(folder)
+                        out["converted_removed"].append(d.get("name"))
+                    else:
+                        keep.append(d)
+                if len(keep) != len(datasets):
+                    _write_converted(root, keep)
+    return out
+
+
+def sanitize_name(name: str, max_len: int = 80) -> str:
+    """A safe file name (without extension) from what a person typed: letters, digits, space, dot, dash and
+    underscore only; no path separators, no leading dot, at most max_len characters. ValueError when nothing is left."""
+    import re
+    name = os.path.splitext(name)[0] if name.lower().endswith(".npz") else name
+    if "/" in name or "\\" in name or ".." in name:
+        raise ValueError("the file name must not contain / \\ or ..")
+    clean = re.sub(r"[^A-Za-z0-9 ._-]+", "_", name).strip(" .")
+    clean = re.sub(r"\s+", " ", clean)[:max_len].strip(" .")
+    if not clean:
+        raise ValueError("the file name is empty")
+    return clean
+
+
+def rename_take(root: str, rel: str, title: str | None = None, note: str | None = None, new_name: str | None = None,
+                busy=()) -> dict:
+    """Give a take a display name (`title`) and optionally a note; they are stored in the index entry and in a small
+    sidecar next to the take (`<take>.json`), so they survive a rebuilt index. The take file keeps its name unless
+    `new_name` is given: then the .npz and its sidecars are renamed inside their folder (name sanitised, never over
+    an existing file) and the index and the derived-dataset references follow. Returns the updated index entry.
+    ValueError explains a refusal (not a take of this folder, being recorded, name taken, bad name)."""
+    with index_lock(root):
+        path = _check_take_path(root, rel)
+        takes = read_index(root)
+        entry = next((t for t in takes if t.get("file") == rel), None)
+        if entry is None or not os.path.isfile(path):
+            raise ValueError("this take no longer exists")
+        if rel in set(busy) or os.path.exists(path + ".part"):
+            raise ValueError("the take is being recorded or written")
+        if title is not None:
+            title = " ".join(str(title).split())[:120]
+            entry["title"] = title
+            if not title:
+                entry.pop("title", None)
+        if note is not None:
+            note = str(note).strip()[:2000]
+            entry["note"] = note
+            if not note:
+                entry.pop("note", None)
+        new_rel = rel
+        if new_name is not None:
+            clean = sanitize_name(new_name)
+            folder = os.path.dirname(rel)
+            new_rel = os.path.join(folder, clean + ".npz")
+            if new_rel != rel:
+                new_path = os.path.join(root, new_rel)
+                if not _inside(root, new_path):
+                    raise ValueError("the new name leaves the recordings folder")
+                old_stem, new_stem = os.path.splitext(os.path.basename(rel))[0], clean
+                moves = [(f, os.path.join(folder, new_stem + os.path.basename(f)[len(old_stem):])) for f in take_files(root, rel)]
+                taken = [dst for _, dst in moves if os.path.lexists(os.path.join(root, dst))]
+                taken += take_files(root, new_rel)[1:]         # files that would count as the renamed take's own
+                if taken:
+                    raise ValueError(f"a file named {os.path.basename(taken[0])} already exists")
+                for src, dst in moves:
+                    os.rename(os.path.join(root, src), os.path.join(root, dst))
+                entry["file"] = new_rel
+                entry.setdefault("original_file", rel)
+        side = {k: entry[k] for k in ("title", "note", "original_file") if entry.get(k)}
+        sp = _sidecar_path(root, new_rel)
+        if side:
+            _write_json(sp, side)
+        elif os.path.isfile(sp):
+            os.remove(sp)
+        write_index(root, takes)
+        if new_rel != rel:
+            datasets, changed = read_converted(root), False
+            for d in datasets:
+                if rel in d.get("takes", []):
+                    d["takes"] = [new_rel if f == rel else f for f in d["takes"]]
+                    changed = True
+            if changed:
+                _write_converted(root, datasets)
+        return entry
 
 
 def read_index(root: str) -> list:

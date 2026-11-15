@@ -93,6 +93,20 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .tag.none { color: var(--ink-dim); } .tag.none::before { border: 1px solid var(--ink-dim); }
 td a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; white-space: nowrap; }
 td a:hover { color: var(--accent); }
+th.name { text-transform: none; font-family: var(--font-sans); letter-spacing: -.01em; color: var(--ink); font-size: 16px; padding: 10px 16px 10px 0; border-bottom: 1px solid var(--rule-soft); white-space: normal; min-width: 220px; }
+th.name a { color: var(--ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; }
+th.name a:hover { color: var(--accent); }
+.sub { display: block; font-size: 13px; color: var(--ink-dim); margin-top: 3px; font-weight: 400; }
+.note-line { color: var(--ink-muted); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-bottom: 14px; min-height: 42px; }
+#rec-msg { color: var(--ink-muted); font-size: 15px; }
+button { font: inherit; color: var(--ink); background: transparent; border: 1px solid rgba(243,244,246,.36); padding: 7px 14px; min-height: 38px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.danger { border-color: var(--thermal); color: var(--thermal); }
+button:disabled { opacity: .4; cursor: default; }
+td.acts { white-space: nowrap; }
+td.acts button + button { margin-left: 8px; }
+input[type=checkbox] { width: 18px; height: 18px; accent-color: #8d90ff; }
 .note { font-size: 13.5px; color: var(--ink-dim); line-height: 1.5; margin-top: 12px; max-width: 70em; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
@@ -164,12 +178,15 @@ td a:hover { color: var(--accent); }
       <div class="section-head"><div class="marker label">05</div>
         <h2 class="section-title" id="h-rec">Recordings</h2>
         <p class="section-desc" id="rec-desc">Takes recorded from the headset.</p></div>
+      <div class="toolbar"><button type="button" id="del-sel" class="danger" disabled>Delete selected</button>
+        <span id="rec-msg" role="status" aria-live="polite"></span></div>
       <div class="scroll"><table id="rec-table"><caption id="rec-cap"></caption><thead></thead><tbody></tbody></table></div>
       <p class="note" id="rec-note"></p>
     </section>
   </main>
 </div>
 
+<script src="/manage.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -248,22 +265,60 @@ function render(s) {
   $("lat-table").tBodies[0].innerHTML = parts.map((p) => `<tr><th scope="row" style="text-transform:none;font-family:var(--font-sans);font-size:15px;color:var(--ink);letter-spacing:-.01em;border-bottom:1px solid var(--rule-soft);padding:10px 16px 10px 0"><span class="swatch ${p[0]}" aria-hidden="true"></span>${esc(p[1])}</th><td class="n">${f(p[2], 1)}</td><td style="color:var(--ink-muted)">${esc(p[3])}</td></tr>`).join("")
     + `<tr><th scope="row" style="text-transform:none;font-family:var(--font-sans);font-size:15px;color:var(--ink);letter-spacing:-.01em;padding:10px 16px 10px 0">Total measured by the headset</th><td class="n">${f(lat.total, 1)}</td><td style="color:var(--ink-muted)">controller sample to the resulting state in the headset (the first four parts)</td></tr>`;
 
-  const rec = s.recordings;
-  if (rec) {
-    $("rec-desc").textContent = `Takes recorded from the headset, newest first. Folder: ${rec.dir}`;
-    $("rec-cap").textContent = `${rec.rows.length} takes` + (rec.summary ? `, ${rec.summary}` : "");
-    $("rec-table").tHead.innerHTML = "<tr>" + rec.columns.map((c) => `<th scope="col" class="${c.num ? "n" : ""}">${esc(c.name)}</th>`).join("") + "</tr>";
-    $("rec-table").tBodies[0].innerHTML = rec.rows.length ? rec.rows.map((r) => "<tr>" + r.map((v, i) => {
-      const col = rec.columns[i];
-      if (col.link) return `<td><a href="${esc(v.href)}" aria-label="${esc(v.label || v.text)}">${esc(v.text)}</a></td>`;
-      if (col.tag) { const k = v && v.kind || "none"; return `<td><span class="tag ${k}">${esc(v && v.text || "–")}</span></td>`; }
-      return `<td class="${col.num ? "n" : ""}${col.mono ? " mono" : ""}">${esc(v ?? "–")}</td>`; }).join("") + "</tr>").join("")
-      : `<tr><td colspan="${rec.columns.length}" style="color:var(--ink-muted)">No takes yet. In the headset press B (right controller), or open the menu and choose "Start recording".</td></tr>`;
-    $("rec-note").textContent = rec.note || "";
-  }
+  if (s.recordings) renderRecordings(s.recordings);
   if (s.point) { if (!history.length || history[history.length - 1].t !== s.point.t) history.push(s.point); if (history.length > 900) history.shift(); }
   charts();
 }
+// ---- recordings: the table is rebuilt only when its data changed, so a selection or the keyboard focus is not lost
+let recKey = "", recTakes = [];
+const selected = new Set();
+function renderRecordings(rec) {
+  const key = JSON.stringify(rec);
+  if (key === recKey) return;
+  recKey = key; recTakes = rec.takes || [];
+  for (const f of [...selected]) if (!recTakes.some((t) => t.file === f)) selected.delete(f);
+  const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.k : null;
+  $("rec-desc").textContent = `Takes recorded from the headset, newest first. Folder: ${rec.dir}`;
+  $("rec-cap").textContent = `${recTakes.length} take${recTakes.length === 1 ? "" : "s"}` + (rec.summary ? `, ${rec.summary}` : "");
+  $("rec-table").tHead.innerHTML = `<tr><th scope="col"><input type="checkbox" id="sel-all" data-k="all" aria-label="Select all takes"></th>` +
+    [["Name", ""], ["Recorded", ""], ["Duration", "n"], ["Wall time", "n"], ["Steps", "n"], ["Size", "n"], ["Validity", ""], ["Converted", ""], ["Actions", ""]]
+      .map(([n, c]) => `<th scope="col" class="${c}">${n}</th>`).join("") + "</tr>";
+  $("rec-table").tBodies[0].innerHTML = recTakes.length ? recTakes.map((t, i) => {
+    const name = t.title || `Take ${t.take}`, v = t.validity || {kind: "none", text: "–"}, dis = t.busy ? "disabled title=\"This take is being recorded or written\"" : "";
+    return `<tr><td><input type="checkbox" data-sel="${i}" data-k="sel:${esc(t.file)}" aria-label="Select ${esc(name)}, ${esc(QT.sub(t))}" ${selected.has(t.file) ? "checked" : ""} ${t.busy ? "disabled" : ""}></td>
+      <th scope="row" class="name"><a href="${esc(t.href)}" data-k="open:${esc(t.file)}">${esc(name)}</a>${t.this_run ? ' <span class="tag good">this run</span>' : ""}
+        <span class="sub">take ${esc(t.take)} · ${esc(t.session)} · <span class="mono">${esc(t.file.split("/").pop())}</span></span>${t.note ? `<span class="sub note-line">${esc(t.note)}</span>` : ""}</th>
+      <td>${esc(t.recorded)}</td><td class="n">${Number(t.seconds).toFixed(1)} s</td><td class="n">${Number(t.wall_seconds).toFixed(0)} s</td><td class="n">${esc(t.steps)}</td><td class="n">${esc(t.size)}</td>
+      <td><span class="tag ${esc(v.kind)}">${esc(v.text)}</span></td>
+      <td><span class="tag ${t.converted.length ? "good" : "none"}">${t.converted.length ? esc(t.converted.join(", ")) : "no"}</span></td>
+      <td class="acts"><button type="button" data-ren="${i}" data-k="ren:${esc(t.file)}" ${dis} aria-label="Rename ${esc(name)}">Rename</button><button type="button" class="danger" data-del="${i}" data-k="del:${esc(t.file)}" ${dis} aria-label="Delete ${esc(name)}">Delete</button></td></tr>`; }).join("")
+    : `<tr><td colspan="10" style="color:var(--ink-muted)">No takes in this folder. In the headset press B (right controller), or open the menu and choose "Start recording".</td></tr>`;
+  $("rec-note").textContent = rec.note || "";
+  updateSelection();
+  if (focus) { const el = document.querySelector(`[data-k="${CSS.escape(focus)}"]`) || $("recordings"); el.focus(); }      // the focused take is gone: stay in the section
+}
+function updateSelection() {
+  const n = selected.size, all = $("sel-all"), free = recTakes.filter((t) => !t.busy);
+  $("del-sel").disabled = n === 0;
+  $("del-sel").textContent = n ? `Delete selected (${n})` : "Delete selected";
+  if (all) { all.checked = n > 0 && n === free.length; all.indeterminate = n > 0 && n < free.length; }
+}
+function say(text) { $("rec-msg").textContent = text; }
+const afterDelete = (out) => { for (const f of out.deleted) selected.delete(f); updateSelection();
+  say(`Deleted ${out.deleted.length} take${out.deleted.length === 1 ? "" : "s"}` + (out.converted_removed.length ? ` and the converted clips ${out.converted_removed.join(", ")}` : "") + "."); };
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.del !== undefined) QT.deleteDialog([recTakes[b.dataset.del]], afterDelete);
+  else if (b.dataset.ren !== undefined) QT.renameDialog(recTakes[b.dataset.ren], (en) => say(`Renamed to "${en.title || "take " + en.take}".`));
+  else if (b.id === "del-sel") QT.deleteDialog(recTakes.filter((t) => selected.has(t.file)), afterDelete);
+});
+document.addEventListener("change", (e) => {
+  const c = e.target;
+  if (c.id === "sel-all") { selected.clear(); if (c.checked) for (const t of recTakes) if (!t.busy) selected.add(t.file);
+    document.querySelectorAll("[data-sel]").forEach((x) => { x.checked = selected.has(recTakes[x.dataset.sel].file); }); updateSelection(); }
+  else if (c.dataset && c.dataset.sel !== undefined) { const f = recTakes[c.dataset.sel].file; c.checked ? selected.add(f) : selected.delete(f); updateSelection(); }
+});
+
 function charts() {
   draw("c-rtf", [{get: (p) => p.contact == null ? null : Math.min(p.contact, 20) / 20, color: "#e8c77e", width: 1},
                  {get: (p) => p.rtf, color: "#f0713a"}], {ref: 1.0, min: 1.0, digits: 2, shade: true});

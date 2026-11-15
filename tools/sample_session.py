@@ -62,7 +62,7 @@ def main():
     srv = TeleopServer(name="Quest Teleop demo", port=args.port, beacon=False).start()
     ses = DemoSession(srv, data_dir=args.data_dir, session=args.session, host_label=args.host_label)
     srv.set_scene(ses.scene)
-    page = StatusPage(srv, port=args.status_port, extra=ses.status, title="Quest Teleop demo", recordings_dir=ses.recorder.root).start()
+    page = StatusPage(srv, port=args.status_port, extra=ses.status, title="Quest Teleop demo", recorder=ses.recorder).start()
     dt = 1.0 / 60.0
     for i in range(30):                                   # the grippers engage at the hands' start pose
         ses.tick(dt, frame(0.0, i + 1))

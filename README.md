@@ -84,7 +84,7 @@ rope = scene.add_tube("rope", rope_points, radius=0.003)                      # 
 srv = TeleopServer(name="my sim").start()
 srv.set_scene(scene)
 rec = TakeRecorder(tools=("left", "right"), max_opening=0.08)                 # ~/teleop_recordings by default
-StatusPage(srv, recordings_dir=rec.root).start()                              # http://localhost:8800
+StatusPage(srv, recorder=rec).start()                                        # http://localhost:8800
 while True:
     inp = srv.get_input()                             # newest controller sample, or None
     if inp and not inp.edit_mode and inp.hands[1].active:
@@ -135,11 +135,12 @@ teleop_recordings/<session>/take_003_<time>.npz
 | `start/<name>`, `meta` | your state before the first step; JSON with tool names, rate, up axis |
 
 Only `t` and `tool/pos` are required. `load_take(path)` returns the arrays, `take_summary(take)` the path lengths,
-gripper events and durations.
+gripper events and durations. `reconcile(root)`, `delete_takes(root, files)` and `rename_take(root, file, title=...)`
+in `quest_teleop.recording` keep the index and the files in step (the status page uses them).
 
 ## Status page
 
-`StatusPage(server, recordings_dir=...)` serves http://localhost:8800 from the server process: standard library
+`StatusPage(server, recorder=rec)` serves http://localhost:8800 from the server process: standard library
 only, live by server-sent events, static HTML with no build step, nothing loaded from the internet.
 
 * **Connection**: headset connected / worn, USB or Wi-Fi, device, address, packet loss each way.
@@ -151,6 +152,11 @@ only, live by server-sent events, static HTML with no build step, nothing loaded
 * **Recordings**: every take. Selecting one opens the **trajectory view**: each tool's path in 3D (turn, move,
   zoom, play, scrub), the gripper state marked along the path by shape as well as colour (open, closing, closed,
   opening, could not follow), the gripper over time, and the take's properties.
+* **Rename and delete**: every take has Rename (a display name and note; optionally the file name too) and Delete
+  (one take or several ticked ones, after a dialog that lists the files; converted datasets only if you tick the
+  box). The take being recorded is protected, and nothing outside the recordings folder is ever touched.
+* **The list matches the disk**: when the page starts and at every refresh the index is reconciled with the take
+  files present, so takes you removed by hand disappear and take files you copied in appear.
 
 Both pages use real text and tables, shapes plus words for every state, visible keyboard focus, keyboard control
 of the 3D view, and text equivalents for the charts.

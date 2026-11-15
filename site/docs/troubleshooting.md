@@ -70,7 +70,7 @@ area. In the headset, open the menu and use the grips and sticks to place and sc
 * It listens on `127.0.0.1:8800` by default: open it on the same computer. For another machine, start it with
   `host="0.0.0.0"` (it has no login).
 * Port 8800 already in use: `StatusPage(srv, port=8801)` or `quest-teleop-demo --status-port 8801`.
-* The Recordings section is empty: pass `recordings_dir=rec.root`.
+* The Recordings section is empty: pass `recorder=rec` (or `recordings_dir=...`).
 
 ## The desktop client does not start
 

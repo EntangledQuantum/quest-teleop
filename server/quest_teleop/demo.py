@@ -363,7 +363,7 @@ def main():
     if args.status_port:
         from .status import StatusPage
         page = StatusPage(srv, port=args.status_port, extra=ses.status, title="Quest Teleop demo",
-                          recordings_dir=ses.recorder.root).start()
+                          recorder=ses.recorder).start()
         print(f"[demo] status page: {page.url}    takes are saved in {ses.recorder.root}", flush=True)
     dt = 1.0 / args.hz
     nxt, t_end, t_stat = time.perf_counter(), time.perf_counter() + args.seconds, time.perf_counter()

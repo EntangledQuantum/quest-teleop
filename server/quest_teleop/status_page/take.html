@@ -62,7 +62,12 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .now .row { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
 .now .name { font-weight: 500; min-width: 7ch; }
 .mono { font-family: var(--font-mono); font-size: 12.5px; }
-.err { color: var(--thermal); font-size: 18px; padding: 40px 0; }
+.err { color: var(--ink); font-size: 20px; padding: 40px 0; display: grid; gap: 14px; }
+.err .why { display: flex; gap: 12px; align-items: baseline; }
+.err .why::before { content: ""; width: 12px; height: 12px; border: 2px solid var(--thermal); flex: none; }
+.head-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button.danger { border-color: var(--thermal); color: var(--thermal); }
+#act-msg { color: var(--ink-muted); font-size: 15px; }
 </style>
 </head>
 <body>
@@ -71,6 +76,9 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
     <div class="label"><a href="/">Status</a> &nbsp;/&nbsp; Recording</div>
     <h1 class="page-title" id="title">Take</h1>
     <p class="page-desc" id="desc">Loading the take.</p>
+    <p class="page-desc" id="note" hidden></p>
+    <div class="head-actions" id="actions" hidden><button type="button" id="rename">Rename</button><button type="button" id="delete" class="danger">Delete</button>
+      <span id="act-msg" role="status" aria-live="polite"></span></div>
   </header>
   <div class="edge" aria-hidden="true"></div>
   <div id="error" class="err" role="alert" hidden></div>
@@ -119,6 +127,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
     </div>
   </main>
 </div>
+<script src="/manage.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -270,8 +279,12 @@ function init(d) {
   const e = D.entry || {}, s = D.summary, st = e.started || D.meta.started || "";
   const when = st.length >= 15 ? `${st.slice(0, 4)}-${st.slice(4, 6)}-${st.slice(6, 8)} ${st.slice(9, 11)}:${st.slice(11, 13)}:${st.slice(13, 15)}` : st;
   document.title = `Take ${e.take ?? D.meta.take ?? ""} trajectory`;
-  $("title").textContent = `Take ${e.take ?? D.meta.take ?? ""}`;
-  $("desc").textContent = `Session ${e.session ?? D.meta.session ?? "?"}, recorded ${when}. ${s.steps} steps over ${s.seconds.toFixed(1)} s, ${D.tools.length} tool${D.tools.length > 1 ? "s" : ""}.`;
+  const takeNo = e.take ?? D.meta.take ?? "";
+  document.title = `${D.title || "Take " + takeNo} trajectory`;
+  $("title").textContent = D.title || `Take ${takeNo}`;
+  $("desc").innerHTML = `Take ${esc(takeNo)} of session ${esc(e.session ?? D.meta.session ?? "?")}, recorded ${esc(when)}. ${s.steps} steps over ${s.seconds.toFixed(1)} s, ${D.tools.length} tool${D.tools.length > 1 ? "s" : ""}. <span class="mono">${esc(D.file)}</span>`;
+  $("note").hidden = !D.note; $("note").textContent = D.note || "";
+  $("actions").hidden = false;
   const valid = !("valid" in e) ? "not checked" : (e.valid ? "valid" : "flagged: " + (e.flags || []).join(", "));
   const known = new Set(["file", "session", "take", "started", "steps", "seconds", "sim_seconds", "wall_seconds", "rate_hz", "tools", "valid", "flags", "physics"]);
   const more = Object.entries(e).filter(([k, v]) => !known.has(k) && (typeof v !== "object" || v === null)).map(([k, v]) => [k.replace(/_/g, " "), esc(String(v))]);
@@ -316,10 +329,26 @@ $("timeline").addEventListener("click", (e) => { const r = e.target.getBoundingC
 window.addEventListener("resize", () => { if (D) { drawView(); drawTimeline(); } });
 
 const file = new URLSearchParams(location.search).get("file") || "";
-fetch("/api/take?file=" + encodeURIComponent(file)).then((r) => r.json()).then((d) => {
-  if (d.error) { $("error").hidden = false; $("error").textContent = "Cannot show this take: " + d.error; $("desc").textContent = file; return; }
-  init(d); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawView(); drawTimeline(); });
-}).catch((e) => { $("error").hidden = false; $("error").textContent = "Cannot load the take: " + e; });
+function fail(why) {
+  $("main").hidden = true; $("actions").hidden = true;
+  $("title").textContent = "Take not available";
+  $("desc").textContent = file;
+  $("error").hidden = false;
+  $("error").innerHTML = `<span class="why">${esc(why.charAt(0).toUpperCase() + why.slice(1))}.</span><span>It may have been deleted or renamed. <a href="/#recordings">Back to the recordings</a></span>`;
+}
+function load(f) {
+  fetch("/api/take?file=" + encodeURIComponent(f)).then((r) => r.json()).then((d) => {
+    if (d.error) { fail(d.error); return; }
+    init(d); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { drawView(); drawTimeline(); });
+  }).catch((e) => fail("cannot load the take (" + e + ")"));
+}
+const current = () => ({file: D.file, session: (D.entry || {}).session ?? D.meta.session, take: (D.entry || {}).take ?? D.meta.take, title: D.title, note: D.note,
+                        files: D.files, converted: D.converted});
+$("rename").addEventListener("click", () => QT.renameDialog(current(), (en) => {
+  if (en.file !== D.file) { location.replace("/take?file=" + encodeURIComponent(en.file)); return; }
+  $("act-msg").textContent = "Renamed."; load(en.file); }));
+$("delete").addEventListener("click", () => QT.deleteDialog([current()], () => { location.href = "/#recordings"; }));
+load(file);
 </script>
 </body>
 </html>
