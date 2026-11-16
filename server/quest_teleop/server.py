@@ -107,11 +107,22 @@ class TeleopServer:
             clients = list(self._clients.values())
         for c in clients:
             self._drop(c, "server stopped", bye=True)
+        # shutdown() first: close() alone does not wake a thread blocked in accept() / recvfrom(), and the port stays
+        # bound until it returns, so a new server (the same program restarting it, another process) could not bind it
+        for s in (self._tcp, self._udp):
+            try:
+                s.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        for t in self._threads:
+            if t is not threading.current_thread():
+                t.join(1.0)
         for s in (self._tcp, self._udp):
             try:
                 s.close()
             except OSError:
                 pass
+        self._threads = []
 
     def _log(self, msg: str) -> None:
         if self.verbose:
