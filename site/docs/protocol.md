@@ -1,4 +1,4 @@
-# quest-teleop protocol, version 1
+# Quest Teleop protocol, version 1
 
 This page is [`docs/PROTOCOL.md`](https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/PROTOCOL.md) from the repository.
 

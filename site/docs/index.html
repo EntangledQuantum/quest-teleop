@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>quest-teleop docs</title>
-<meta name="description" content="What quest-teleop is, its parts, and the order to read these pages in.">
+<title>Quest Teleop docs</title>
+<meta name="description" content="What Quest Teleop is, its parts, and the order to read these pages in.">
 <link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/index.html">
 <link rel="alternate" type="text/markdown" href="index.md" title="This page as Markdown">
 <link rel="help" href="../llms.txt" type="text/plain" title="llms.txt">
@@ -14,7 +14,7 @@
 <body class="docs">
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
-  <a class="brand" href="../index.html">quest-teleop</a>
+  <a class="brand" href="../index.html">Quest Teleop</a>
   <nav aria-label="Site">
     <ul>
       <li><a href="index.html" aria-current="page">Docs</a></li>
@@ -43,8 +43,8 @@
   </nav>
   <main id="main">
     <article class="prose">
-<h1 id="quest-teleop-documentation">quest-teleop documentation</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#pages">Pages</a></li><li><a href="#for-ai-agents">For AI agents</a></li><li><a href="#source">Source</a></li></ol></nav>
-<p>quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The headset app uses standard OpenXR, so it targets Meta Quest headsets in general; it is tested on a Quest 2, and notes that only apply to the Quest 2 say so. quest-teleop has four parts:</p>
+<h1 id="quest-teleop-documentation">Quest Teleop documentation</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#pages">Pages</a></li><li><a href="#for-ai-agents">For AI agents</a></li><li><a href="#source">Source</a></li></ol></nav>
+<p>Quest Teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The headset app uses standard OpenXR, so it targets Meta Quest headsets in general; it is tested on a Quest 2, and notes that only apply to the Quest 2 say so. Quest Teleop has four parts:</p>
 <ul><li><strong>Headset app</strong> (<code>client/quest</code>): native OpenXR + OpenGL ES 3 in C++, one <code>NativeActivity</code>, no Java, no Gradle. It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every display frame, plays vibration, and shows the server's cues, status and buttons.</li><li><strong>Python library</strong> (<code>quest_teleop</code>, numpy only): stream any 3D scene, read the controllers, send haptics and text cues, show a control panel with your own actions, map a hand to a robot tool safely, record takes, and serve a local status page.</li><li><strong>Desktop client</strong> (<code>client/desktop</code>): the same C++ core in a window, driven by mouse and keyboard, to try a server without a headset.</li><li><strong>Demo</strong> (<code>quest-teleop-demo</code>): two grippers, a cube, a rope and a cloth, using every feature above.</li></ul>
 <h2 id="pages">Pages <a class="anchor" href="#pages" aria-label="Link to this section">#</a></h2>
 <p>Read them in this order the first time.</p>
@@ -61,7 +61,7 @@
   </main>
 </div>
 <footer class="site-foot">
-  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <p>Quest Teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
   <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
 </footer>
 </body>

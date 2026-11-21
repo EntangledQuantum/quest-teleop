@@ -1,8 +1,8 @@
-# quest-teleop documentation
+# Quest Teleop documentation
 
-quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The
+Quest Teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The
 headset app uses standard OpenXR, so it targets Meta Quest headsets in general; it is tested on a Quest 2, and notes
-that only apply to the Quest 2 say so. quest-teleop has four parts:
+that only apply to the Quest 2 say so. Quest Teleop has four parts:
 
 * **Headset app** (`client/quest`): native OpenXR + OpenGL ES 3 in C++, one `NativeActivity`, no Java, no Gradle.
   It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every

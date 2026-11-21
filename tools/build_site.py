@@ -31,7 +31,7 @@ VERSION = "0.2.0"
 
 # slug, title, one-line description (used in the navigation, llms.txt and <meta name="description">)
 PAGES = [
-    ("index", "Overview", "What quest-teleop is, its parts, and the order to read these pages in."),
+    ("index", "Overview", "What Quest Teleop is, its parts, and the order to read these pages in."),
     ("install", "Install", "Install the Python library with pip; install the Android toolchain, build the APK and "
                            "install it on the headset; build the desktop client; run the tests."),
     ("quest-setup", "Headset setup", "Written for and tested on a Quest 2: developer mode, the USB detected / allow USB debugging prompts, Link auto "
@@ -265,7 +265,7 @@ def page_html(slug: str, title: str, desc: str, body: str, toc: list) -> str:
         items = "".join(f'<li><a href="#{hid}">{html.escape(text)}</a></li>' for lv, hid, text in toc if lv == 2)
         on_page = f'<nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol>{items}</ol></nav>'
     body = body.replace("</h1>", "</h1>" + on_page, 1) if on_page else body
-    full_title = "quest-teleop docs" if slug == "index" else f"{title} · quest-teleop docs"
+    full_title = "Quest Teleop docs" if slug == "index" else f"{title} · Quest Teleop docs"
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -282,7 +282,7 @@ def page_html(slug: str, title: str, desc: str, body: str, toc: list) -> str:
 <body class="docs">
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
-  <a class="brand" href="../index.html">quest-teleop</a>
+  <a class="brand" href="../index.html">Quest Teleop</a>
   <nav aria-label="Site">
     <ul>
       <li><a href="index.html"{' aria-current="page"' if slug == "index" else ""}>Docs</a></li>
@@ -310,7 +310,7 @@ def page_html(slug: str, title: str, desc: str, body: str, toc: list) -> str:
   </main>
 </div>
 <footer class="site-foot">
-  <p>quest-teleop {VERSION}, MIT licence. <a href="{REPO}">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <p>Quest Teleop {VERSION}, MIT licence. <a href="{REPO}">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
   <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
 </footer>
 </body>
@@ -330,7 +330,7 @@ def absolutize(md: str, slug: str) -> str:
     return re.sub(r"(!?)\[([^\]]*)\]\(([^)\s]+)\)", fix, md)
 
 
-LLMS_HEAD = f"""# quest-teleop
+LLMS_HEAD = f"""# Quest Teleop
 
 > Generic VR teleoperation for Meta Quest headsets: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
 > no Gradle; standard OpenXR, tested on a Quest 2) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
@@ -348,7 +348,7 @@ LLMS_HEAD = f"""# quest-teleop
 
 ## Instructions for agents
 
-Setting up quest-teleop for a user, in order:
+Setting up Quest Teleop for a user, in order:
 
 1. Install the Python library and check it: `python -c "import quest_teleop; print(quest_teleop.__version__)"`.
    This alone is enough to run `quest-teleop-demo` and check it with `quest-teleop-probe` (no headset).
@@ -421,7 +421,7 @@ def main() -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Not found · quest-teleop</title>
+<title>Not found · Quest Teleop</title>
 <link rel="icon" href="{FAVICON}">
 <link rel="stylesheet" href="/quest-teleop/assets/site.css">
 </head>

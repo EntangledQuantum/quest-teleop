@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Use it with your own simulator · quest-teleop docs</title>
+<title>Use it with your own simulator · Quest Teleop docs</title>
 <meta name="description" content="The Python API: Scene, TeleopServer, controller input, haptics, text cues, the headset panel and actions, safe hand-to-tool mapping, the go-back cue, latency measurement.">
 <link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/library.html">
 <link rel="alternate" type="text/markdown" href="library.md" title="This page as Markdown">
@@ -14,7 +14,7 @@
 <body class="docs">
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
-  <a class="brand" href="../index.html">quest-teleop</a>
+  <a class="brand" href="../index.html">Quest Teleop</a>
   <nav aria-label="Site">
     <ul>
       <li><a href="index.html">Docs</a></li>
@@ -44,7 +44,7 @@
   <main id="main">
     <article class="prose">
 <h1 id="use-it-with-your-own-simulator">Use it with your own simulator</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#the-loop">The loop</a></li><li><a href="#a-complete-example">A complete example</a></li><li><a href="#coordinates">Coordinates</a></li><li><a href="#scene">Scene</a></li><li><a href="#teleopserver">TeleopServer</a></li><li><a href="#input">Input</a></li><li><a href="#haptics">Haptics</a></li><li><a href="#text-cues">Text cues</a></li><li><a href="#panel-and-actions">Panel and actions</a></li><li><a href="#safe-hand-to-tool-mapping">Safe hand-to-tool mapping</a></li><li><a href="#latency-measurement">Latency measurement</a></li></ol></nav>
-<p>The Python library is the computer side. Your program owns the simulator (or the robot driver); quest-teleop streams what it should look like to the headset and hands back the controllers. Nothing in the library or the app is specific to a task: you describe the scene with meshes and poses, and the panel with rows and buttons.</p>
+<p>The Python library is the computer side. Your program owns the simulator (or the robot driver); Quest Teleop streams what it should look like to the headset and hands back the controllers. Nothing in the library or the app is specific to a task: you describe the scene with meshes and poses, and the panel with rows and buttons.</p>
 <h2 id="the-loop">The loop <a class="anchor" href="#the-loop" aria-label="Link to this section">#</a></h2>
 <p>Every application has the same shape:</p>
 <ol><li>Build a <code>Scene</code>: meshes, and nodes that place them.</li><li>Start a <code>TeleopServer</code> and give it the scene.</li><li>Every simulation step: read the newest controller sample (<code>get_input</code>), step your simulator with it, write the new poses and vertices into the scene, and call <code>publish</code>.</li></ol>
@@ -197,7 +197,7 @@ srv.note_timing(step, time.perf_counter() - t0 - step)</code></pre></div>
   </main>
 </div>
 <footer class="site-foot">
-  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <p>Quest Teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
   <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
 </footer>
 </body>

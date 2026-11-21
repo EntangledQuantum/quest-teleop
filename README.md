@@ -1,10 +1,10 @@
-# quest-teleop
+# Quest Teleop
 
 Teleoperate anything from a **Meta Quest** headset, without a game engine (standard OpenXR; tested on a Quest 2): a small native headset
 app, a Python library for the computer side, a recorder for the trajectories, and a local web page to watch it all.
 
 **Website and documentation: <https://entangledquantum.github.io/quest-teleop/>.** For an AI coding agent:
-"Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install quest-teleop, set up my
+"Read https://entangledquantum.github.io/quest-teleop/llms.txt and follow it to install Quest Teleop, set up my
 Meta Quest headset, and show me how to use it."
 
 * **Headset app** (`client/`): native OpenXR + OpenGL ES 3 in C++ (one `NativeActivity`, no Java, no Gradle). It

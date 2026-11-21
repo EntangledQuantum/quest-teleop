@@ -1,6 +1,6 @@
 # Use it with your own simulator
 
-The Python library is the computer side. Your program owns the simulator (or the robot driver); quest-teleop
+The Python library is the computer side. Your program owns the simulator (or the robot driver); Quest Teleop
 streams what it should look like to the headset and hands back the controllers. Nothing in the library or the app
 is specific to a task: you describe the scene with meshes and poses, and the panel with rows and buttons.
 

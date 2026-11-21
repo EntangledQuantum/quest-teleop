@@ -1,4 +1,4 @@
-# quest-teleop protocol, version 1
+# Quest Teleop protocol, version 1
 
 Reference implementations: `server/quest_teleop/protocol.py` (Python) and `client/core/protocol.h` (C++).
 All integers and floats are little-endian. Positions are metres, quaternions are `x y z w`, strings are

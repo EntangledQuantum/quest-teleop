@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>quest-teleop protocol, version 1 · quest-teleop docs</title>
+<title>Quest Teleop protocol, version 1 · Quest Teleop docs</title>
 <meta name="description" content="The wire format, version 1: TCP and UDP channels, discovery, session, datagrams, state delta scheme, TCP messages, panel.">
 <link rel="canonical" href="https://entangledquantum.github.io/quest-teleop/docs/protocol.html">
 <link rel="alternate" type="text/markdown" href="protocol.md" title="This page as Markdown">
@@ -14,7 +14,7 @@
 <body class="docs">
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
-  <a class="brand" href="../index.html">quest-teleop</a>
+  <a class="brand" href="../index.html">Quest Teleop</a>
   <nav aria-label="Site">
     <ul>
       <li><a href="index.html">Docs</a></li>
@@ -43,7 +43,7 @@
   </nav>
   <main id="main">
     <article class="prose">
-<h1 id="quest-teleop-protocol-version-1">quest-teleop protocol, version 1</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#channels">Channels</a></li><li><a href="#finding-the-server">Finding the server</a></li><li><a href="#session">Session</a></li><li><a href="#frames-and-coordinate-spaces">Frames and coordinate spaces</a></li><li><a href="#datagrams">Datagrams</a></li><li><a href="#tcp-messages">TCP messages</a></li><li><a href="#cues-are-ordinary-nodes">Cues are ordinary nodes</a></li><li><a href="#size-of-the-traffic">Size of the traffic</a></li></ol></nav>
+<h1 id="quest-teleop-protocol-version-1">Quest Teleop protocol, version 1</h1><nav class="onpage" aria-label="On this page"><p class="label">On this page</p><ol><li><a href="#channels">Channels</a></li><li><a href="#finding-the-server">Finding the server</a></li><li><a href="#session">Session</a></li><li><a href="#frames-and-coordinate-spaces">Frames and coordinate spaces</a></li><li><a href="#datagrams">Datagrams</a></li><li><a href="#tcp-messages">TCP messages</a></li><li><a href="#cues-are-ordinary-nodes">Cues are ordinary nodes</a></li><li><a href="#size-of-the-traffic">Size of the traffic</a></li></ol></nav>
 <p>This page is <a href="https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/PROTOCOL.md"><code>docs/PROTOCOL.md</code></a> from the repository.</p>
 <p>Reference implementations: <code>server/quest_teleop/protocol.py</code> (Python) and <code>client/core/protocol.h</code> (C++). All integers and floats are little-endian. Positions are metres, quaternions are <code>x y z w</code>, strings are <code>u16 length</code> + UTF-8 bytes.</p>
 <h2 id="channels">Channels <a class="anchor" href="#channels" aria-label="Link to this section">#</a></h2>
@@ -153,7 +153,7 @@ u8 legend_count, each:  str key, str text</code></pre></div>
   </main>
 </div>
 <footer class="site-foot">
-  <p>quest-teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
+  <p>Quest Teleop 0.2.0, MIT licence. <a href="https://github.com/EntangledQuantum/quest-teleop">Source on GitHub</a>. Fonts: Host Grotesk and Martian Mono,
   <a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a>. No tracking, no cookies.</p>
 </footer>
 </body>

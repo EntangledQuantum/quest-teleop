@@ -1,4 +1,4 @@
-# quest-teleop
+# Quest Teleop
 
 > Generic VR teleoperation for Meta Quest headsets: a native OpenXR + OpenGL ES 3 headset app (C++, no game engine,
 > no Gradle; standard OpenXR, tested on a Quest 2) and a pip-installable Python library (numpy only) that streams any 3D scene to the headset, receives
@@ -18,7 +18,7 @@ This file contains every documentation page, in reading order. The index is http
 
 ## Instructions for agents
 
-Setting up quest-teleop for a user, in order:
+Setting up Quest Teleop for a user, in order:
 
 1. Install the Python library and check it: `python -c "import quest_teleop; print(quest_teleop.__version__)"`.
    This alone is enough to run `quest-teleop-demo` and check it with `quest-teleop-probe` (no headset).
@@ -42,11 +42,11 @@ Setting up quest-teleop for a user, in order:
 
 <!-- page: https://entangledquantum.github.io/quest-teleop/docs/index.md -->
 
-# quest-teleop documentation
+# Quest Teleop documentation
 
-quest-teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The
+Quest Teleop lets you teleoperate a simulator or a robot from a Meta Quest headset without a game engine. The
 headset app uses standard OpenXR, so it targets Meta Quest headsets in general; it is tested on a Quest 2, and notes
-that only apply to the Quest 2 say so. quest-teleop has four parts:
+that only apply to the Quest 2 say so. Quest Teleop has four parts:
 
 * **Headset app** (`client/quest`): native OpenXR + OpenGL ES 3 in C++, one `NativeActivity`, no Java, no Gradle.
   It receives a 3D scene from a server on your network, draws it in the room, sends both controllers back every
@@ -519,7 +519,7 @@ Next: [Use it with your own simulator](https://entangledquantum.github.io/quest-
 
 # Use it with your own simulator
 
-The Python library is the computer side. Your program owns the simulator (or the robot driver); quest-teleop
+The Python library is the computer side. Your program owns the simulator (or the robot driver); Quest Teleop
 streams what it should look like to the headset and hands back the controllers. Nothing in the library or the app
 is specific to a task: you describe the scene with meshes and poses, and the panel with rows and buttons.
 
@@ -1125,7 +1125,7 @@ Next: [Protocol](https://entangledquantum.github.io/quest-teleop/docs/protocol.m
 
 <!-- page: https://entangledquantum.github.io/quest-teleop/docs/protocol.md -->
 
-# quest-teleop protocol, version 1
+# Quest Teleop protocol, version 1
 
 This page is [`docs/PROTOCOL.md`](https://github.com/EntangledQuantum/quest-teleop/blob/main/docs/PROTOCOL.md) from the repository.
 
