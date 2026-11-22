@@ -46,7 +46,7 @@ Setting up Quest Teleop for a user, in order:
 - [Status page and trajectory viewer](https://entangledquantum.github.io/quest-teleop/docs/status-page.md): The local web page: what it shows, the extra callback, the trajectory viewer, the JSON endpoints.
 - [Protocol](https://entangledquantum.github.io/quest-teleop/docs/protocol.md): The wire format, version 1: TCP and UDP channels, discovery, session, datagrams, state delta scheme, TCP messages, panel.
 - [Measurements](https://entangledquantum.github.io/quest-teleop/docs/measurements.md): Latency and bandwidth on loopback and on a Quest 2, over USB and Wi-Fi.
-- [Troubleshooting](https://entangledquantum.github.io/quest-teleop/docs/troubleshooting.md): The headset does not appear in adb, the build fails, the app does not find the server, nothing moves, high latency, the status page does not open.
+- [Troubleshooting](https://entangledquantum.github.io/quest-teleop/docs/troubleshooting.md): The headset does not appear in adb, the build fails, the app does not find the server, the robot doesn't respond, high latency, the status page does not open.
 - [FAQ](https://entangledquantum.github.io/quest-teleop/docs/faq.md): Supported headsets, engines, Link, operating systems, Wi-Fi or USB, bandwidth, several headsets, own clients, privacy, licence.
 
 ## Optional

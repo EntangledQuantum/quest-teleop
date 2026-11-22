@@ -49,7 +49,7 @@ PAGES = [
                              "state delta scheme, TCP messages, panel."),
     ("measurements", "Measurements", "Latency and bandwidth on loopback and on a Quest 2, over USB and Wi-Fi."),
     ("troubleshooting", "Troubleshooting", "The headset does not appear in adb, the build fails, the app does not "
-                                           "find the server, nothing moves, high latency, the status page does "
+                                           "find the server, the robot doesn't respond, high latency, the status page does "
                                            "not open."),
     ("faq", "FAQ", "Supported headsets, engines, Link, operating systems, Wi-Fi or USB, bandwidth, several "
                    "headsets, own clients, privacy, licence."),

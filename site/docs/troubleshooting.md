@@ -43,7 +43,7 @@ The app shows "Looking for a server on this network". Check, in this order:
 * If the server uses another port, forward that port: `adb reverse tcp:<port> tcp:<port>`, and start the app with
   `--es server 127.0.0.1:<port>`.
 
-## Connected, but nothing moves
+## Connected, but the robot doesn't respond
 
 * The app has to be in front. When the headset is taken off or goes to sleep, or the Quest menu or another app is in
   front, the Quest stops drawing the app but keeps it running in the background. Version 0.2.0 closes its connection

@@ -108,7 +108,7 @@ def test_stream_matches_server_state(tcp_only):
     assert s["latency_ms_median"] < 40.0
 
 
-def test_delta_stream_is_small_when_nothing_moves():
+def test_delta_stream_is_small_when_the_scene_is_at_rest():
     r = _run(False, seconds=2.0, motion="still")
     # rope and cloth come to rest: a frame is then one header-only datagram
     assert r["summary"]["dgrams_per_frame"] < 2.5
